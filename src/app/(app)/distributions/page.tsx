@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Download, FileDown } from "lucide-react";
+import { ChevronDown, Download, FileDown, Merge } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePDF, type InvoicePDFData } from "@/lib/invoice-pdf";
 
@@ -130,6 +130,62 @@ export default function DistributionsPage() {
     exportToCSV(rows, `distribution_${dist.reference_month}`);
   }
 
+  async function handleDownloadCombinedPDF(dist: DistributionWithInvoices) {
+    // Find Qaim Ali and Fitrus invoices
+    const qaimInv = dist.invoices.find((inv) =>
+      inv.employee?.name?.toLowerCase().includes("qaim")
+    );
+    const fitrusInv = dist.invoices.find((inv) =>
+      inv.employee?.name?.toLowerCase().includes("fitrus")
+    );
+
+    if (!qaimInv && !fitrusInv) return;
+
+    const invoicesToCombine = [qaimInv, fitrusInv].filter(Boolean) as (Invoice & { employee: { name: string } })[];
+
+    const totalSalaryUsd = invoicesToCombine.reduce((s, inv) => s + inv.salary_usd, 0);
+    const totalGrossPkr = invoicesToCombine.reduce((s, inv) => s + inv.gross_pkr, 0);
+    const totalRemittanceTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.remittance_tax_pkr, 0);
+    const totalContractorTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.contractor_tax_pkr, 0);
+    const totalTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.total_tax_pkr, 0);
+    const totalNetPkr = invoicesToCombine.reduce((s, inv) => s + inv.net_pkr, 0);
+
+    // Blended exchange rate
+    const blendedRate = totalSalaryUsd > 0 ? totalGrossPkr / totalSalaryUsd : 0;
+
+    // Blended tax percentages
+    const remittancePct = totalGrossPkr > 0 ? (totalRemittanceTaxPkr / totalGrossPkr) * 100 : 0;
+    const contractorPct = totalGrossPkr > 0 ? (totalContractorTaxPkr / totalGrossPkr) * 100 : 0;
+
+    const data: InvoicePDFData = {
+      employeeName: "Qaim Ali",
+      month: formatMonth(dist.reference_month),
+      date: new Date(dist.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      salaryUsd: totalSalaryUsd,
+      exchangeRate: blendedRate,
+      grossPkr: totalGrossPkr,
+      remittanceTaxPercent: Math.round(remittancePct * 100) / 100,
+      remittanceTaxPkr: totalRemittanceTaxPkr,
+      contractorTaxPercent: Math.round(contractorPct * 100) / 100,
+      contractorTaxPkr: totalContractorTaxPkr,
+      totalTaxPercent: Math.round((remittancePct + contractorPct) * 100) / 100,
+      totalTaxPkr: totalTaxPkr,
+      netPkr: totalNetPkr,
+    };
+
+    const blob = await pdf(<InvoicePDF data={data} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `invoice_qaim_ali_combined_${dist.reference_month}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Distribution History</h1>
@@ -221,6 +277,14 @@ export default function DistributionsPage() {
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-semibold">Invoices</h3>
                       <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadCombinedPDF(dist)}
+                        >
+                          <Merge className="size-3.5 mr-1.5" />
+                          Qaim + Fitrus PDF
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
