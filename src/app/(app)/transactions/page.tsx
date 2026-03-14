@@ -107,6 +107,7 @@ export default function TransactionsPage() {
   const [formAmount, setFormAmount] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formReferenceMonth, setFormReferenceMonth] = useState("");
+  const [formDate, setFormDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [formOwnerId, setFormOwnerId] = useState("");
 
   const fetchTransactions = useCallback(async () => {
@@ -150,6 +151,7 @@ export default function TransactionsPage() {
     setFormAmount("");
     setFormDescription("");
     setFormReferenceMonth("");
+    setFormDate(new Date().toISOString().slice(0, 10));
     setFormOwnerId("");
   };
 
@@ -170,6 +172,7 @@ export default function TransactionsPage() {
       description: formDescription || null,
       reference_month: formReferenceMonth || null,
       owner_id: needsOwner && formOwnerId ? formOwnerId : null,
+      created_at: formDate ? `${formDate}T00:00:00+05:00` : undefined,
     });
 
     setSaving(false);
@@ -350,6 +353,16 @@ export default function TransactionsPage() {
                       placeholder="Optional description"
                       value={formDescription}
                       onChange={(e) => setFormDescription(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Transaction Date */}
+                  <div className="space-y-1.5">
+                    <Label>Transaction Date</Label>
+                    <Input
+                      type="date"
+                      value={formDate}
+                      onChange={(e) => setFormDate(e.target.value)}
                     />
                   </div>
 
