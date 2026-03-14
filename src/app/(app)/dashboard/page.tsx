@@ -38,16 +38,7 @@ const typeBadgeVariant: Record<
   expense: "destructive",
 };
 
-function Tip({ text }: { text: string }) {
-  return (
-    <span className="relative group cursor-help ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-muted text-muted-foreground text-[10px] font-bold border">
-      ?
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 rounded-md bg-foreground text-background text-xs leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg whitespace-pre-line">
-        {text}
-      </span>
-    </span>
-  );
-}
+import { Tip } from "@/components/tip";
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient();
