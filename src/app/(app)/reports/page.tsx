@@ -24,6 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, FileDown } from "lucide-react";
+import { Tip } from "@/components/ui/tip";
 
 const typeLabels: Record<TransactionType, string> = {
   client_payment: "Client Payment",
@@ -195,7 +196,10 @@ export default function ReportsPage() {
                   <TableHead className="text-right">Revenue</TableHead>
                   <TableHead className="text-right">Salary Cost</TableHead>
                   <TableHead className="text-right">Contractor Tax</TableHead>
-                  <TableHead className="text-right">Margin</TableHead>
+                  <TableHead className="text-right">
+                    Margin
+                    <Tip text="Margin = Revenue − Salary Cost − Contractor Tax&#10;&#10;This is the company's gross profit before expenses and owner movements. A negative margin means payroll exceeded client revenue for that month." />
+                  </TableHead>
                   <TableHead className="text-right">Expenses</TableHead>
                   <TableHead className="text-right">Investments</TableHead>
                   <TableHead className="text-right">Repayments</TableHead>
