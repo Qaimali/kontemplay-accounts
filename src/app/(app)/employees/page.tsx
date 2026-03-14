@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Employee, Invoice, Distribution } from "@/lib/types";
+import type { Employee, Invoice, Distribution, Transaction } from "@/lib/types";
 import { formatUSD, formatPKR, formatNumber, formatMonth } from "@/lib/format";
 import {
   Card,
@@ -119,6 +119,7 @@ export default function EmployeesPage() {
   // Invoice expansion
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<InvoiceWithMonth[]>([]);
+  const [directPayments, setDirectPayments] = useState<Transaction[]>([]);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
 
   const fetchEmployees = useCallback(async () => {
@@ -137,6 +138,8 @@ export default function EmployeesPage() {
 
   async function fetchInvoices(employeeId: string) {
     setLoadingInvoices(true);
+
+    // Fetch distribution-based invoices
     const { data } = await supabase
       .from("invoices")
       .select("*, distributions!inner(reference_month)")
@@ -150,8 +153,19 @@ export default function EmployeesPage() {
         reference_month: dist?.reference_month ?? "Unknown",
       };
     });
-
     setInvoices(mapped);
+
+    // Fetch direct transactions linked to employee (not from distributions)
+    const { data: directTxns } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("employee_id", employeeId)
+      .is("invoice_id", null)
+      .is("distribution_id", null)
+      .order("created_at", { ascending: false })
+      .returns<Transaction[]>();
+    setDirectPayments(directTxns ?? []);
+
     setLoadingInvoices(false);
   }
 
@@ -159,6 +173,7 @@ export default function EmployeesPage() {
     if (expandedId === empId) {
       setExpandedId(null);
       setInvoices([]);
+      setDirectPayments([]);
     } else {
       setExpandedId(empId);
       fetchInvoices(empId);
@@ -230,8 +245,10 @@ export default function EmployeesPage() {
   }
 
   const totalEarned = useMemo(
-    () => invoices.reduce((s, inv) => s + inv.net_pkr, 0),
-    [invoices]
+    () =>
+      invoices.reduce((s, inv) => s + inv.net_pkr, 0) +
+      directPayments.reduce((s, t) => s + t.amount_pkr, 0),
+    [invoices, directPayments]
   );
 
   return (
@@ -425,7 +442,7 @@ export default function EmployeesPage() {
 
                     {loadingInvoices ? (
                       <p className="text-sm text-muted-foreground py-2">Loading invoices...</p>
-                    ) : invoices.length === 0 ? (
+                    ) : invoices.length === 0 && directPayments.length === 0 ? (
                       <p className="text-sm text-muted-foreground py-2">No invoices yet for this employee.</p>
                     ) : (
                       <>
@@ -489,9 +506,47 @@ export default function EmployeesPage() {
                           </TableBody>
                         </Table>
                         </div>
+                        {directPayments.length > 0 && (
+                          <>
+                            <h3 className="text-sm font-semibold mt-4 mb-2">Direct Payments</h3>
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead>Month</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {directPayments.map((txn) => (
+                                    <TableRow key={txn.id}>
+                                      <TableCell className="whitespace-nowrap">
+                                        {new Date(txn.created_at).toLocaleDateString("en-PK", {
+                                          day: "2-digit",
+                                          month: "short",
+                                          year: "numeric",
+                                        })}
+                                      </TableCell>
+                                      <TableCell>{txn.description ?? "-"}</TableCell>
+                                      <TableCell>
+                                        {txn.reference_month ? formatMonth(txn.reference_month) : "-"}
+                                      </TableCell>
+                                      <TableCell className="text-right font-mono font-semibold text-emerald-400">
+                                        {formatPKR(txn.amount_pkr)}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </>
+                        )}
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30 text-sm">
                           <span className="text-muted-foreground">
                             {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
+                            {directPayments.length > 0 && ` + ${directPayments.length} direct payment${directPayments.length !== 1 ? "s" : ""}`}
                           </span>
                           <span className="font-mono font-semibold">
                             Total earned: <span className="text-emerald-400">{formatPKR(totalEarned)}</span>
