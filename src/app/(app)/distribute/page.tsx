@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-type Step = "input" | "employees" | "preview";
+type Step = "input" | "employees" | "preview" | "done";
 
 export default function DistributePage() {
   const supabase = createClient();
@@ -53,6 +53,9 @@ export default function DistributePage() {
   const [result, setResult] = useState<DistributionResult | null>(null);
   const [saveAsTransactions, setSaveAsTransactions] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Step 4: Done - saved distribution ID
+  const [savedDistId, setSavedDistId] = useState<string | null>(null);
 
   // Load employees on mount
   useEffect(() => {
@@ -232,6 +235,8 @@ export default function DistributePage() {
         if (txnError) throw txnError;
       }
 
+      setSavedDistId(dist.id);
+      setStep("done");
       toast.success("Distribution saved! Invoices created.");
     } catch (err) {
       toast.error(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -245,9 +250,9 @@ export default function DistributePage() {
       <div className="flex items-center gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Distribute</h1>
         <div className="flex gap-2">
-          {(["input", "employees", "preview"] as Step[]).map((s, i) => (
+          {(["input", "employees", "preview", "done"] as Step[]).map((s, i) => (
             <Badge key={s} variant={step === s ? "default" : "outline"}>
-              {i + 1}. {s === "input" ? "Payment" : s === "employees" ? "Employees" : "Preview"}
+              {i + 1}. {s === "input" ? "Payment" : s === "employees" ? "Employees" : s === "preview" ? "Preview" : "Invoices"}
             </Badge>
           ))}
         </div>
@@ -598,6 +603,140 @@ export default function DistributePage() {
                     {saving ? "Saving..." : "Save Distribution & Generate Invoices"}
                   </Button>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Step 4: Invoices */}
+      {step === "done" && result && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoices Generated — {referenceMonth}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <p className="text-sm text-muted-foreground mb-4">
+                Distribution and {result.employees.length} invoices saved successfully. Print individual invoices below.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Individual Invoice Cards */}
+          {result.employees.map((emp) => (
+            <Card key={emp.employee_id} className="print:break-inside-avoid">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{emp.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Invoice for {referenceMonth}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const el = document.getElementById(`invoice-${emp.employee_id}`);
+                      if (el) {
+                        const w = window.open("", "_blank");
+                        if (w) {
+                          w.document.write(`
+                            <html><head><title>Invoice - ${emp.name} - ${referenceMonth}</title>
+                            <style>
+                              body { font-family: system-ui, sans-serif; padding: 40px; color: #1a1a1a; }
+                              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+                              th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e5e5e5; }
+                              th { font-size: 12px; color: #666; font-weight: 600; }
+                              td { font-size: 14px; }
+                              .mono { font-family: monospace; }
+                              .right { text-align: right; }
+                              .bold { font-weight: 700; }
+                              .green { color: #059669; }
+                              .red { color: #dc2626; }
+                              .header { margin-bottom: 24px; }
+                              .header h1 { font-size: 24px; margin: 0; }
+                              .header p { color: #666; margin: 4px 0 0; }
+                              .divider { border-top: 2px solid #1a1a1a; margin: 16px 0; }
+                              .net-row td { font-size: 18px; font-weight: 700; border-top: 2px solid #1a1a1a; }
+                              .footer { margin-top: 32px; font-size: 12px; color: #999; }
+                            </style></head><body>
+                            <div class="header">
+                              <h1>Kontemplay Finance</h1>
+                              <p>Payment Invoice</p>
+                            </div>
+                            <table>
+                              <tr><th>Employee</th><td class="bold">${emp.name}</td></tr>
+                              <tr><th>Period</th><td>${referenceMonth}</td></tr>
+                              <tr><th>Salary (USD)</th><td class="mono">$${formatNumber(emp.salary_usd, 0)}</td></tr>
+                              <tr><th>Exchange Rate</th><td class="mono">${formatNumber(emp.rate, 2)} PKR/USD</td></tr>
+                              <tr><th>Gross (PKR)</th><td class="mono">${formatPKR(emp.gross_pkr)}</td></tr>
+                              <tr><th>Contractor Tax (${emp.contractor_tax_percent}%)</th><td class="mono red">-${formatPKR(emp.contractor_tax_pkr)}</td></tr>
+                              <tr><th>Remittance Tax (${emp.remittance_tax_percent}%)</th><td class="mono red">-${formatPKR(emp.remittance_tax_pkr)}</td></tr>
+                              <tr><th>Total Tax</th><td class="mono red">-${formatPKR(emp.total_tax_pkr)}</td></tr>
+                              <tr class="net-row"><th>Net Payable (PKR)</th><td class="mono green">${formatPKR(emp.net_pkr)}</td></tr>
+                            </table>
+                            <div class="footer">
+                              <p>Generated by Kontemplay Finance on ${new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" })}</p>
+                            </div>
+                            </body></html>
+                          `);
+                          w.document.close();
+                          w.print();
+                        }
+                      }
+                    }}
+                  >
+                    Print
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent id={`invoice-${emp.employee_id}`}>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="text-muted-foreground">Salary (USD)</div>
+                  <div className="text-right font-mono">${formatNumber(emp.salary_usd, 0)}</div>
+
+                  <div className="text-muted-foreground">Exchange Rate</div>
+                  <div className="text-right font-mono">{formatNumber(emp.rate, 2)} PKR/USD</div>
+
+                  <div className="text-muted-foreground">Gross (PKR)</div>
+                  <div className="text-right font-mono">{formatPKR(emp.gross_pkr)}</div>
+
+                  <div className="text-muted-foreground">Contractor Tax ({emp.contractor_tax_percent}%)</div>
+                  <div className="text-right font-mono text-red-400">-{formatPKR(emp.contractor_tax_pkr)}</div>
+
+                  <div className="text-muted-foreground">Remittance Tax ({emp.remittance_tax_percent}%)</div>
+                  <div className="text-right font-mono text-red-400">-{formatPKR(emp.remittance_tax_pkr)}</div>
+
+                  <div className="text-muted-foreground">Total Tax</div>
+                  <div className="text-right font-mono text-red-400">-{formatPKR(emp.total_tax_pkr)}</div>
+
+                  <div className="border-t border-border/50 pt-3 font-semibold">Net Payable (PKR)</div>
+                  <div className="border-t border-border/50 pt-3 text-right font-mono text-lg font-bold text-emerald-400">
+                    {formatPKR(emp.net_pkr)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Summary + New Distribution */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Total distributed: <span className="font-mono font-semibold text-foreground">{formatPKR(result.summary.total_employee_net)}</span> to {result.employees.length} employees
+                </div>
+                <Button
+                  onClick={() => {
+                    setStep("input");
+                    setResult(null);
+                    setSavedDistId(null);
+                  }}
+                >
+                  New Distribution
+                </Button>
               </div>
             </CardContent>
           </Card>

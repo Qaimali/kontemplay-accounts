@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatPKR, formatMonth } from "@/lib/format";
 import type { Transaction, TransactionType, Owner } from "@/lib/types";
@@ -18,6 +18,7 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  TableFooter,
 } from "@/components/ui/table";
 import {
   Select,
@@ -79,6 +80,11 @@ const allFilterTypes: { value: TransactionType; label: string }[] = [
   { value: "expense", label: "Expense" },
 ];
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 function isCreditType(type: TransactionType): boolean {
   return type === "client_payment" || type === "owner_investment";
 }
@@ -86,7 +92,7 @@ function isCreditType(type: TransactionType): boolean {
 export default function TransactionsPage() {
   const supabase = createClient();
 
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -97,7 +103,10 @@ export default function TransactionsPage() {
 
   // Filters
   const [filterType, setFilterType] = useState<string>("");
-  const [filterMonth, setFilterMonth] = useState("");
+  const [filterYear, setFilterYear] = useState<string>("");
+  const [filterMonth, setFilterMonth] = useState<string>("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -112,22 +121,14 @@ export default function TransactionsPage() {
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
-    let query = supabase
+    const { data } = await supabase
       .from("transactions")
       .select("*")
-      .order("created_at", { ascending: false });
-
-    if (filterType) {
-      query = query.eq("type", filterType);
-    }
-    if (filterMonth) {
-      query = query.eq("reference_month", filterMonth);
-    }
-
-    const { data } = await query.returns<Transaction[]>();
-    setTransactions(data ?? []);
+      .order("created_at", { ascending: false })
+      .returns<Transaction[]>();
+    setAllTransactions(data ?? []);
     setLoading(false);
-  }, [filterType, filterMonth]);
+  }, []);
 
   const fetchOwners = useCallback(async () => {
     const { data } = await supabase
@@ -145,6 +146,41 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchOwners();
   }, [fetchOwners]);
+
+  // Available years from data
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    for (const t of allTransactions) {
+      years.add(new Date(t.created_at).getFullYear().toString());
+    }
+    return Array.from(years).sort().reverse();
+  }, [allTransactions]);
+
+  // Filtered transactions
+  const transactions = useMemo(() => {
+    return allTransactions.filter((txn) => {
+      if (filterType && txn.type !== filterType) return false;
+
+      const d = new Date(txn.created_at);
+      if (filterYear && d.getFullYear().toString() !== filterYear) return false;
+      if (filterMonth && (d.getMonth() + 1).toString() !== filterMonth) return false;
+      if (filterDateFrom && txn.created_at < filterDateFrom) return false;
+      if (filterDateTo && txn.created_at > filterDateTo + "T23:59:59") return false;
+
+      return true;
+    });
+  }, [allTransactions, filterType, filterYear, filterMonth, filterDateFrom, filterDateTo]);
+
+  // Totals
+  const totalCredits = useMemo(
+    () => transactions.filter((t) => t.is_credit).reduce((s, t) => s + t.amount_pkr, 0),
+    [transactions]
+  );
+  const totalDebits = useMemo(
+    () => transactions.filter((t) => !t.is_credit).reduce((s, t) => s + t.amount_pkr, 0),
+    [transactions]
+  );
+  const net = totalCredits - totalDebits;
 
   const resetForm = () => {
     setFormType("client_payment");
@@ -233,16 +269,26 @@ export default function TransactionsPage() {
     fetchTransactions();
   }
 
+  function clearFilters() {
+    setFilterType("");
+    setFilterYear("");
+    setFilterMonth("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  }
+
+  const hasFilters = filterType || filterYear || filterMonth || filterDateFrom || filterDateTo;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
           <Label>Type</Label>
           <Select value={filterType} onValueChange={(v) => setFilterType(v ?? "")}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[170px]">
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
@@ -257,15 +303,60 @@ export default function TransactionsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Reference Month</Label>
+          <Label>Year</Label>
+          <Select value={filterYear} onValueChange={(v) => setFilterYear(v ?? "")}>
+            <SelectTrigger className="w-[110px]">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All years</SelectItem>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={y}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Month</Label>
+          <Select value={filterMonth} onValueChange={(v) => setFilterMonth(v ?? "")}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All months</SelectItem>
+              {MONTHS.map((m, i) => (
+                <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>From</Label>
           <Input
-            type="text"
-            placeholder="YYYY-MM"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="w-[140px]"
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="w-[150px]"
           />
         </div>
+
+        <div className="space-y-1.5">
+          <Label>To</Label>
+          <Input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="w-[150px]"
+          />
+        </div>
+
+        {hasFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="mb-0.5">
+            Clear filters
+          </Button>
+        )}
       </div>
 
       {/* Bulk Actions */}
@@ -289,7 +380,14 @@ export default function TransactionsPage() {
       {/* Transaction History */}
       <Card>
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+          <CardTitle>
+            Transaction History
+            {!loading && (
+              <span className="ml-2 text-sm font-normal text-muted-foreground">
+                ({transactions.length} transaction{transactions.length !== 1 ? "s" : ""})
+              </span>
+            )}
+          </CardTitle>
           <CardAction>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger
@@ -313,7 +411,6 @@ export default function TransactionsPage() {
                 </DialogHeader>
 
                 <div className="space-y-4">
-                  {/* Type */}
                   <div className="space-y-1.5">
                     <Label>Type</Label>
                     <Select
@@ -333,7 +430,6 @@ export default function TransactionsPage() {
                     </Select>
                   </div>
 
-                  {/* Amount */}
                   <div className="space-y-1.5">
                     <Label>Amount (PKR)</Label>
                     <Input
@@ -345,7 +441,6 @@ export default function TransactionsPage() {
                     />
                   </div>
 
-                  {/* Description */}
                   <div className="space-y-1.5">
                     <Label>Description</Label>
                     <Input
@@ -356,7 +451,6 @@ export default function TransactionsPage() {
                     />
                   </div>
 
-                  {/* Transaction Date */}
                   <div className="space-y-1.5">
                     <Label>Transaction Date</Label>
                     <Input
@@ -366,7 +460,6 @@ export default function TransactionsPage() {
                     />
                   </div>
 
-                  {/* Reference Month */}
                   <div className="space-y-1.5">
                     <Label>Reference Month</Label>
                     <Input
@@ -377,7 +470,6 @@ export default function TransactionsPage() {
                     />
                   </div>
 
-                  {/* Owner (conditional) */}
                   {showOwnerField && (
                     <div className="space-y-1.5">
                       <Label>Owner</Label>
@@ -399,7 +491,6 @@ export default function TransactionsPage() {
                     </div>
                   )}
 
-                  {/* Credit / Debit indicator */}
                   <div className="text-sm text-muted-foreground">
                     This will be recorded as a{" "}
                     <span
@@ -514,6 +605,35 @@ export default function TransactionsPage() {
                   </TableRow>
                 ))}
               </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-right font-semibold">
+                    Totals
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-mono font-semibold text-emerald-400">
+                      {formatPKR(totalCredits)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <span className="font-mono font-semibold text-red-400">
+                      {formatPKR(totalDebits)}
+                    </span>
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-right font-semibold">
+                    Net
+                  </TableCell>
+                  <TableCell colSpan={2} className="text-right">
+                    <span className={`font-mono font-bold text-base ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      {net >= 0 ? "+" : ""}{formatPKR(net)}
+                    </span>
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
             </Table>
           )}
         </CardContent>
