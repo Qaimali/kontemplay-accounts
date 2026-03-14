@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { deleteInvoiceAction } from "./actions";
 
 type EmployeeForm = {
   name: string;
@@ -218,43 +219,13 @@ export default function EmployeesPage() {
     );
     if (!confirmed) return;
 
-    try {
-      // 1. Delete linked transactions first (FK constraint)
-      const { error: txnErr } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("invoice_id", inv.id);
-      if (txnErr) console.error("txn delete error:", txnErr);
-
-      // 2. Delete the invoice
-      const { error: invErr } = await supabase
-        .from("invoices")
-        .delete()
-        .eq("id", inv.id);
-      if (invErr) {
-        toast.error(`Failed to delete invoice: ${invErr.message}`);
-        return;
-      }
-
-      // 3. Check if distribution has any remaining invoices
-      const { count } = await supabase
-        .from("invoices")
-        .select("id", { count: "exact", head: true })
-        .eq("distribution_id", inv.distribution_id);
-
-      // 4. If no invoices left, clean up distribution
-      if (count === 0) {
-        await supabase.from("transactions").delete().eq("distribution_id", inv.distribution_id);
-        await supabase.from("distributions").delete().eq("id", inv.distribution_id);
-        toast.success("Invoice and empty distribution deleted");
-      } else {
-        toast.success("Invoice deleted");
-      }
-    } catch (err) {
-      toast.error(`Delete failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    const { error } = await deleteInvoiceAction(inv.id, inv.distribution_id);
+    if (error) {
+      toast.error(`Failed: ${error}`);
+    } else {
+      toast.success("Invoice deleted");
     }
 
-    // Refresh
     if (expandedId) fetchInvoices(expandedId);
   }
 
