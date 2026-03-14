@@ -67,16 +67,23 @@ export default async function DashboardPage() {
     ownerNames[o.id] = o.name;
   }
 
-  const totalCredits = allTxns
-    .filter((t) => t.is_credit)
-    .reduce((sum, t) => sum + t.amount_pkr, 0);
+  // --- Meaningful metrics ---
+  const sum = (type: TransactionType) =>
+    allTxns.filter((t) => t.type === type).reduce((s, t) => s + t.amount_pkr, 0);
 
-  const totalDebits = allTxns
-    .filter((t) => !t.is_credit)
-    .reduce((sum, t) => sum + t.amount_pkr, 0);
+  const clientRevenue = sum("client_payment");
+  const salaryPayouts = sum("salary_payout");
+  const contractorTax = sum("contractor_tax");
+  const ownerRepayments = sum("owner_repayment");
+  const ownerInvestments = sum("owner_investment");
+  const expenses = sum("expense");
 
-  const availableBalance = totalCredits - totalDebits;
+  // Cash position: client money in - operating costs - repayments to owners
+  // Owner investments & expenses cancel out (partners paid directly for company expenses)
+  const operatingCost = salaryPayouts + contractorTax;
+  const cashPosition = clientRevenue - operatingCost - ownerRepayments;
 
+  // Owner liabilities
   const ownerMap = new Map<
     string,
     { name: string; invested: number; repaid: number }
@@ -114,7 +121,6 @@ export default async function DashboardPage() {
   );
 
   const totalOwed = ownerLiabilities.reduce((sum, o) => sum + o.owed, 0);
-  const netPosition = availableBalance - totalOwed;
 
   const recentTxns = allTxns.slice(0, 10);
 
@@ -133,15 +139,15 @@ export default async function DashboardPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Total Credits
-                <Tip text={`Client payments + owner investments.\n\n- Client payments: ${formatPKR(allTxns.filter(t => t.type === 'client_payment').reduce((s, t) => s + t.amount_pkr, 0))}\n- Owner investments: ${formatPKR(allTxns.filter(t => t.type === 'owner_investment').reduce((s, t) => s + t.amount_pkr, 0))}`} />
+                Client Revenue
+                <Tip text="Total payments received from clients. This is the actual income." />
               </span>
               <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10">
                 <TrendingUp className="size-4 text-emerald-400" />
               </div>
             </div>
             <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-emerald-400">
-              {formatPKR(totalCredits)}
+              {formatPKR(clientRevenue)}
             </p>
           </CardContent>
         </Card>
@@ -150,15 +156,15 @@ export default async function DashboardPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Total Debits
-                <Tip text={`All money out.\n\n- Salaries: ${formatPKR(allTxns.filter(t => t.type === 'salary_payout').reduce((s, t) => s + t.amount_pkr, 0))}\n- Contractor tax: ${formatPKR(allTxns.filter(t => t.type === 'contractor_tax').reduce((s, t) => s + t.amount_pkr, 0))}\n- Expenses: ${formatPKR(allTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount_pkr, 0))}\n- Repayments: ${formatPKR(allTxns.filter(t => t.type === 'owner_repayment').reduce((s, t) => s + t.amount_pkr, 0))}`} />
+                Operating Cost
+                <Tip text={`Salaries + contractor tax paid from client revenue.\n\n• Salaries: ${formatPKR(salaryPayouts)}\n• Contractor tax (FBR): ${formatPKR(contractorTax)}`} />
               </span>
               <div className="flex size-8 items-center justify-center rounded-lg bg-red-500/10">
                 <TrendingDown className="size-4 text-red-400" />
               </div>
             </div>
             <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-red-400">
-              {formatPKR(totalDebits)}
+              {formatPKR(operatingCost)}
             </p>
           </CardContent>
         </Card>
@@ -167,15 +173,15 @@ export default async function DashboardPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Available Balance
-                <Tip text={`Credits minus Debits. Negative = paid out more than received.`} />
+                Cash Position
+                <Tip text={`What the company actually has (or owes).\n\nClient Revenue: ${formatPKR(clientRevenue)}\n- Operating Cost: ${formatPKR(operatingCost)}\n- Repaid to Owners: ${formatPKR(ownerRepayments)}\n= Cash: ${formatPKR(cashPosition)}\n\nNote: Owner investments & expenses cancel out (partners paid directly for things like domain, designer, etc.)`} />
               </span>
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
                 <Wallet className="size-4 text-primary" />
               </div>
             </div>
-            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${availableBalance >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatPKR(availableBalance)}
+            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${cashPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {formatPKR(cashPosition)}
             </p>
           </CardContent>
         </Card>
@@ -184,15 +190,15 @@ export default async function DashboardPage() {
           <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Net Position
-                <Tip text={`Balance minus what's owed to partners. The company's true position.`} />
+                Owes to Partners
+                <Tip text={`Total outstanding loans from partners. Partners paid for company expenses out of pocket — this is what the company still needs to pay back.\n\nTotal invested: ${formatPKR(ownerInvestments)}\nTotal repaid: ${formatPKR(ownerRepayments)}\nStill owed: ${formatPKR(totalOwed)}`} />
               </span>
-              <div className="flex size-8 items-center justify-center rounded-lg bg-chart-3/10">
-                <Scale className="size-4 text-chart-3" />
+              <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10">
+                <Scale className="size-4 text-amber-400" />
               </div>
             </div>
-            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${netPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatPKR(netPosition)}
+            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight text-amber-400`}>
+              {formatPKR(totalOwed)}
             </p>
           </CardContent>
         </Card>
