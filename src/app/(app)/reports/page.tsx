@@ -188,21 +188,22 @@ export default function ReportsPage() {
               No transaction data available.
             </p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-8"></TableHead>
                   <TableHead>Month</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">Salary Cost</TableHead>
-                  <TableHead className="text-right">Contractor Tax</TableHead>
+                  <TableHead className="text-right hidden sm:table-cell">Salary Cost</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">Contractor Tax</TableHead>
                   <TableHead className="text-right">
                     Margin
                     <Tip text="Margin = Revenue − Salary Cost − Contractor Tax&#10;&#10;This is the company's gross profit before expenses and owner movements. A negative margin means payroll exceeded client revenue for that month." />
                   </TableHead>
-                  <TableHead className="text-right">Expenses</TableHead>
-                  <TableHead className="text-right">Investments</TableHead>
-                  <TableHead className="text-right">Repayments</TableHead>
+                  <TableHead className="text-right hidden md:table-cell">Expenses</TableHead>
+                  <TableHead className="text-right hidden lg:table-cell">Investments</TableHead>
+                  <TableHead className="text-right hidden lg:table-cell">Repayments</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -225,29 +226,29 @@ export default function ReportsPage() {
                         <TableCell className="font-medium">
                           {formatMonth(r.month)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-emerald-400">
+                        <TableCell className="text-right font-mono text-emerald-400 whitespace-nowrap">
                           {formatPKR(r.clientRevenue)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-400">
+                        <TableCell className="text-right font-mono text-red-400 hidden sm:table-cell whitespace-nowrap">
                           {formatPKR(r.salaryCost)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-400">
+                        <TableCell className="text-right font-mono text-red-400 hidden md:table-cell whitespace-nowrap">
                           {formatPKR(r.contractorTax)}
                         </TableCell>
                         <TableCell
-                          className={`text-right font-mono font-semibold ${
+                          className={`text-right font-mono font-semibold whitespace-nowrap ${
                             r.companyMargin >= 0 ? "text-emerald-400" : "text-red-400"
                           }`}
                         >
                           {formatPKR(r.companyMargin)}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-red-400">
+                        <TableCell className="text-right font-mono text-red-400 hidden md:table-cell whitespace-nowrap">
                           {r.expenses > 0 ? formatPKR(r.expenses) : "-"}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
+                        <TableCell className="text-right font-mono hidden lg:table-cell whitespace-nowrap">
                           {r.ownerInvestments > 0 ? formatPKR(r.ownerInvestments) : "-"}
                         </TableCell>
-                        <TableCell className="text-right font-mono">
+                        <TableCell className="text-right font-mono hidden lg:table-cell whitespace-nowrap">
                           {r.ownerRepayments > 0 ? formatPKR(r.ownerRepayments) : "-"}
                         </TableCell>
                       </TableRow>
@@ -255,7 +256,7 @@ export default function ReportsPage() {
                       {/* Expanded detail rows */}
                       {isExpanded && (
                         <TableRow key={`${r.month}-detail`}>
-                          <TableCell colSpan={9} className="p-0">
+                          <TableCell colSpan={99} className="p-0">
                             <div className="bg-muted/20 px-6 py-4 border-y border-border/30">
                               <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
                                 {formatMonth(r.month)} — {r.transactions.length} transaction{r.transactions.length !== 1 ? "s" : ""}
@@ -317,34 +318,35 @@ export default function ReportsPage() {
                 <TableRow className="font-bold">
                   <TableCell></TableCell>
                   <TableCell>All Time</TableCell>
-                  <TableCell className="text-right font-mono text-emerald-400">
+                  <TableCell className="text-right font-mono text-emerald-400 whitespace-nowrap">
                     {formatPKR(totals.clientRevenue)}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-red-400">
+                  <TableCell className="text-right font-mono text-red-400 hidden sm:table-cell whitespace-nowrap">
                     {formatPKR(totals.salaryCost)}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-red-400">
+                  <TableCell className="text-right font-mono text-red-400 hidden md:table-cell whitespace-nowrap">
                     {formatPKR(totals.contractorTax)}
                   </TableCell>
                   <TableCell
-                    className={`text-right font-mono ${
+                    className={`text-right font-mono whitespace-nowrap ${
                       totals.companyMargin >= 0 ? "text-emerald-400" : "text-red-400"
                     }`}
                   >
                     {formatPKR(totals.companyMargin)}
                   </TableCell>
-                  <TableCell className="text-right font-mono text-red-400">
+                  <TableCell className="text-right font-mono text-red-400 hidden md:table-cell whitespace-nowrap">
                     {totals.expenses > 0 ? formatPKR(totals.expenses) : "-"}
                   </TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="text-right font-mono hidden lg:table-cell whitespace-nowrap">
                     {totals.ownerInvestments > 0 ? formatPKR(totals.ownerInvestments) : "-"}
                   </TableCell>
-                  <TableCell className="text-right font-mono">
+                  <TableCell className="text-right font-mono hidden lg:table-cell whitespace-nowrap">
                     {totals.ownerRepayments > 0 ? formatPKR(totals.ownerRepayments) : "-"}
                   </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

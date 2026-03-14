@@ -208,7 +208,7 @@ export default function DistributionsPage() {
                 {/* Summary row */}
                 <button
                   onClick={() => toggleExpand(dist.id)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                  className="flex w-full flex-col gap-2 px-4 py-3 text-left hover:bg-muted/30 transition-colors sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <ChevronDown
@@ -232,7 +232,7 @@ export default function DistributionsPage() {
                       {employeeCount} employee{employeeCount !== 1 ? "s" : ""}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-6 text-right text-sm">
+                  <div className="flex items-center gap-4 pl-7 text-right text-sm sm:gap-6 sm:pl-0">
                     <div>
                       <p className="text-xs text-muted-foreground">Total USD</p>
                       <p className="font-mono font-medium">{formatUSD(dist.total_usd)}</p>
@@ -241,7 +241,7 @@ export default function DistributionsPage() {
                       <p className="text-xs text-muted-foreground">Employee Net</p>
                       <p className="font-mono font-medium">{formatPKR(totalNet)}</p>
                     </div>
-                    <div>
+                    <div className="hidden sm:block">
                       <p className="text-xs text-muted-foreground">Company Share</p>
                       <p className="font-mono font-medium text-emerald-400">
                         {formatPKR(dist.company_net_pkr ?? 0)}
@@ -274,16 +274,16 @@ export default function DistributionsPage() {
                     </div>
 
                     {/* Invoices */}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
                       <h3 className="text-sm font-semibold">Invoices</h3>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleDownloadCombinedPDF(dist)}
                         >
                           <Merge className="size-3.5 mr-1.5" />
-                          Qaim + Fitrus PDF
+                          Combined PDF
                         </Button>
                         <Button
                           variant="outline"
@@ -303,14 +303,15 @@ export default function DistributionsPage() {
                         </Button>
                       </div>
                     </div>
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Employee</TableHead>
-                          <TableHead className="text-right">USD</TableHead>
-                          <TableHead className="text-right">Rate</TableHead>
-                          <TableHead className="text-right">Gross PKR</TableHead>
-                          <TableHead className="text-right">Tax PKR</TableHead>
+                          <TableHead className="text-right hidden sm:table-cell">USD</TableHead>
+                          <TableHead className="text-right hidden md:table-cell">Rate</TableHead>
+                          <TableHead className="text-right hidden md:table-cell">Gross PKR</TableHead>
+                          <TableHead className="text-right hidden sm:table-cell">Tax PKR</TableHead>
                           <TableHead className="text-right">Net PKR</TableHead>
                           <TableHead className="w-10"></TableHead>
                         </TableRow>
@@ -321,19 +322,19 @@ export default function DistributionsPage() {
                             <TableCell className="font-medium">
                               {inv.employee?.name ?? "Unknown"}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="text-right font-mono hidden sm:table-cell">
                               {formatUSD(inv.salary_usd)}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="text-right font-mono hidden md:table-cell">
                               {formatNumber(inv.rate_applied)}
                             </TableCell>
-                            <TableCell className="text-right font-mono">
+                            <TableCell className="text-right font-mono hidden md:table-cell">
                               {formatPKR(inv.gross_pkr)}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-red-400">
+                            <TableCell className="text-right font-mono text-red-400 hidden sm:table-cell">
                               {formatPKR(inv.total_tax_pkr)}
                             </TableCell>
-                            <TableCell className="text-right font-mono font-semibold text-emerald-400">
+                            <TableCell className="text-right font-mono font-semibold text-emerald-400 whitespace-nowrap">
                               {formatPKR(inv.net_pkr)}
                             </TableCell>
                             <TableCell>
@@ -351,6 +352,7 @@ export default function DistributionsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
 
                     {/* Company share */}
                     <div className="rounded-md bg-muted/30 p-4 mt-4">
@@ -373,6 +375,7 @@ export default function DistributionsPage() {
                     {transactions.length > 0 && (
                       <div className="mt-4">
                         <h3 className="text-sm font-semibold mb-2">Linked Transactions</h3>
+                        <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -403,6 +406,7 @@ export default function DistributionsPage() {
                             ))}
                           </TableBody>
                         </Table>
+                        </div>
                       </div>
                     )}
                   </CardContent>

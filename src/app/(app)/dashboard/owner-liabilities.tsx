@@ -89,7 +89,7 @@ export function OwnerLiabilities({
               {isExpanded && (
                 <div className="mt-1 rounded-lg border border-border/30 bg-background/50 p-3">
                   {/* Summary */}
-                  <div className="flex gap-6 mb-3">
+                  <div className="flex flex-wrap gap-4 mb-3 sm:gap-6">
                     <div>
                       <p className="text-xs text-muted-foreground">Invested</p>
                       <p className="font-mono text-sm font-semibold text-emerald-400">
@@ -124,19 +124,20 @@ export function OwnerLiabilities({
                       No transactions.
                     </p>
                   ) : (
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Date</TableHead>
                           <TableHead>Type</TableHead>
-                          <TableHead>Description</TableHead>
+                          <TableHead className="hidden sm:table-cell">Description</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {owner.transactions.map((txn) => (
                           <TableRow key={txn.id}>
-                            <TableCell className="text-muted-foreground">
+                            <TableCell className="text-muted-foreground whitespace-nowrap">
                               {new Date(txn.created_at).toLocaleDateString(
                                 "en-PK",
                                 {
@@ -159,10 +160,10 @@ export function OwnerLiabilities({
                                   : "Repayment"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="max-w-[250px] truncate">
+                            <TableCell className="max-w-[250px] truncate hidden sm:table-cell">
                               {txn.description ?? "-"}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right whitespace-nowrap">
                               <span
                                 className={`font-mono font-medium ${
                                   txn.type === "owner_investment"
@@ -178,6 +179,7 @@ export function OwnerLiabilities({
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                   )}
                 </div>
               )}

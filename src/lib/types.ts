@@ -79,6 +79,20 @@ export interface Transaction {
   employee?: Employee;
 }
 
+export interface ClientInvoice {
+  id: string;
+  invoice_number: number;
+  bill_to: string;
+  date: string;
+  line_items: { description: string; subtitle?: string; quantity: number; rate: number }[];
+  tax_percent: number;
+  subtotal: number;
+  total: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 // Distribution calculator types
 export interface EmployeeDistInput {
   employee_id: string;

@@ -247,9 +247,9 @@ export default function DistributePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Distribute</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(["input", "employees", "preview", "done"] as Step[]).map((s, i) => (
             <Badge key={s} variant={step === s ? "default" : "outline"}>
               {i + 1}. {s === "input" ? "Payment" : s === "employees" ? "Employees" : s === "preview" ? "Preview" : "Invoices"}
@@ -265,7 +265,7 @@ export default function DistributePage() {
             <CardTitle>Payment Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Reference Month</Label>
                 <Input
@@ -314,7 +314,7 @@ export default function DistributePage() {
             {rates && (
               <div className="mt-4 rounded-lg border p-4 bg-muted/50">
                 <h3 className="font-semibold mb-2">Calculated Rates</h3>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
                   <div>
                     <span className="text-muted-foreground">Original Amount:</span>
                     <p className="font-mono font-semibold">{formatPKR(rates.original_amount)}</p>
@@ -352,7 +352,8 @@ export default function DistributePage() {
             )}
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10"></TableHead>
@@ -424,7 +425,8 @@ export default function DistributePage() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </div>
 
             <div className="mt-4 text-sm text-muted-foreground">
               Total Employee USD:{" "}
@@ -435,7 +437,7 @@ export default function DistributePage() {
               </strong>
             </div>
 
-            <div className="flex justify-between mt-4">
+            <div className="flex flex-col-reverse gap-2 mt-4 sm:flex-row sm:justify-between">
               <Button variant="outline" onClick={() => setStep("input")}>
                 Back
               </Button>
@@ -453,16 +455,17 @@ export default function DistributePage() {
               <CardTitle>Distribution Preview — {referenceMonth}</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead className="text-right">USD</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead className="text-right">Gross PKR</TableHead>
-                    <TableHead className="text-right">Contractor Tax</TableHead>
-                    <TableHead className="text-right">Remittance Tax</TableHead>
-                    <TableHead className="text-right">Total Tax</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Rate</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Gross PKR</TableHead>
+                    <TableHead className="text-right hidden md:table-cell">Contractor Tax</TableHead>
+                    <TableHead className="text-right hidden md:table-cell">Remittance Tax</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Total Tax</TableHead>
                     <TableHead className="text-right">Net PKR</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -473,19 +476,19 @@ export default function DistributePage() {
                       <TableCell className="text-right font-mono">
                         ${formatNumber(emp.salary_usd, 0)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right font-mono hidden sm:table-cell">
                         {formatNumber(emp.rate, 2)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right font-mono hidden sm:table-cell">
                         {formatPKR(emp.gross_pkr)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right font-mono hidden md:table-cell">
                         {formatPKR(emp.contractor_tax_pkr)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right font-mono hidden md:table-cell">
                         {formatPKR(emp.remittance_tax_pkr)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right font-mono hidden sm:table-cell">
                         {formatPKR(emp.total_tax_pkr)}
                       </TableCell>
                       <TableCell className="text-right font-mono font-semibold">
@@ -499,17 +502,17 @@ export default function DistributePage() {
                     <TableCell className="text-right font-mono">
                       ${formatNumber(result.employees.reduce((s, e) => s + e.salary_usd, 0), 0)}
                     </TableCell>
-                    <TableCell></TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="hidden sm:table-cell"></TableCell>
+                    <TableCell className="text-right font-mono hidden sm:table-cell">
                       {formatPKR(result.summary.total_employee_gross)}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right font-mono hidden md:table-cell">
                       {formatPKR(result.summary.total_contractor_tax)}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right font-mono hidden md:table-cell">
                       {formatPKR(result.summary.total_employee_tax - result.summary.total_contractor_tax)}
                     </TableCell>
-                    <TableCell className="text-right font-mono">
+                    <TableCell className="text-right font-mono hidden sm:table-cell">
                       {formatPKR(result.summary.total_employee_tax)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
@@ -518,6 +521,7 @@ export default function DistributePage() {
                   </TableRow>
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -527,7 +531,7 @@ export default function DistributePage() {
               <CardTitle>Company Share (Kontemplay)</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
                 <div>USD Share:</div>
                 <div className="text-right font-mono">${formatNumber(result.company.usd, 0)}</div>
                 <div>Gross from USD (base rate):</div>
@@ -552,7 +556,7 @@ export default function DistributePage() {
               <CardTitle>Verification</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
                 <div>Employee Net:</div>
                 <div className="text-right font-mono">{formatPKR(result.summary.total_employee_net)}</div>
                 <div>Employee Tax:</div>
@@ -584,23 +588,23 @@ export default function DistributePage() {
           {/* Actions */}
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="save-txns"
                     checked={saveAsTransactions}
                     onCheckedChange={(v) => setSaveAsTransactions(!!v)}
                   />
-                  <Label htmlFor="save-txns">
+                  <Label htmlFor="save-txns" className="text-sm">
                     Save as debit transactions (salary payouts + contractor tax)
                   </Label>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col-reverse gap-2 sm:flex-row">
                   <Button variant="outline" onClick={() => setStep("employees")}>
                     Back
                   </Button>
                   <Button onClick={handleSave} disabled={saving}>
-                    {saving ? "Saving..." : "Save Distribution & Generate Invoices"}
+                    {saving ? "Saving..." : "Save & Generate Invoices"}
                   </Button>
                 </div>
               </div>
@@ -693,7 +697,7 @@ export default function DistributePage() {
                 </div>
               </CardHeader>
               <CardContent id={`invoice-${emp.employee_id}`}>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 text-sm">
                   <div className="text-muted-foreground">Salary (USD)</div>
                   <div className="text-right font-mono">${formatNumber(emp.salary_usd, 0)}</div>
 
@@ -724,7 +728,7 @@ export default function DistributePage() {
           {/* Summary + New Distribution */}
           <Card>
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm text-muted-foreground">
                   Total distributed: <span className="font-mono font-semibold text-foreground">{formatPKR(result.summary.total_employee_net)}</span> to {result.employees.length} employees
                 </div>

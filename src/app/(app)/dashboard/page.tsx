@@ -238,46 +238,48 @@ export default async function DashboardPage() {
               <p className="text-sm text-muted-foreground">No transactions yet.</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentTxns.map((txn) => (
-                  <TableRow key={txn.id}>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(txn.created_at).toLocaleDateString("en-PK", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={typeBadgeVariant[txn.type]}>
-                        {typeLabels[txn.type]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[300px] truncate">
-                      {txn.description ??
-                        (txn.reference_month
-                          ? formatMonth(txn.reference_month)
-                          : "-")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className={`font-mono font-medium ${txn.is_credit ? "text-emerald-400" : "text-red-400"}`}>
-                        {txn.is_credit ? "+" : "-"}
-                        {formatPKR(txn.amount_pkr)}
-                      </span>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden sm:table-cell">Description</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {recentTxns.map((txn) => (
+                    <TableRow key={txn.id}>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {new Date(txn.created_at).toLocaleDateString("en-PK", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={typeBadgeVariant[txn.type]}>
+                          {typeLabels[txn.type]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[300px] truncate hidden sm:table-cell">
+                        {txn.description ??
+                          (txn.reference_month
+                            ? formatMonth(txn.reference_month)
+                            : "-")}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <span className={`font-mono font-medium ${txn.is_credit ? "text-emerald-400" : "text-red-400"}`}>
+                          {txn.is_credit ? "+" : "-"}
+                          {formatPKR(txn.amount_pkr)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

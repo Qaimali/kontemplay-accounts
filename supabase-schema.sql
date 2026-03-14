@@ -97,6 +97,23 @@ create table transactions (
 );
 
 -- ============================================
+-- CLIENT INVOICES (invoices sent to clients)
+-- ============================================
+create table client_invoices (
+  id uuid primary key default uuid_generate_v4(),
+  invoice_number integer not null,
+  bill_to text not null default 'Youth Athletes United',
+  date date not null,
+  line_items jsonb not null, -- [{description, subtitle?, quantity, rate}]
+  tax_percent numeric(5,2) default 0,
+  subtotal numeric(14,2) not null,
+  total numeric(14,2) not null,
+  notes text,
+  created_by uuid references owners(id),
+  created_at timestamptz default now()
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 create index idx_transactions_type on transactions(type);
@@ -105,6 +122,7 @@ create index idx_transactions_owner on transactions(owner_id);
 create index idx_invoices_distribution on invoices(distribution_id);
 create index idx_invoices_employee on invoices(employee_id);
 create index idx_distributions_month on distributions(reference_month);
+create index idx_client_invoices_date on client_invoices(date);
 
 -- ============================================
 -- ROW LEVEL SECURITY
@@ -114,6 +132,7 @@ alter table employees enable row level security;
 alter table distributions enable row level security;
 alter table invoices enable row level security;
 alter table transactions enable row level security;
+alter table client_invoices enable row level security;
 
 -- All authenticated users (owners) can read/write everything
 create policy "Owners can read all" on owners for select to authenticated using (true);
@@ -135,6 +154,11 @@ create policy "Auth read transactions" on transactions for select to authenticat
 create policy "Auth insert transactions" on transactions for insert to authenticated with check (true);
 create policy "Auth update transactions" on transactions for update to authenticated using (true);
 create policy "Auth delete transactions" on transactions for delete to authenticated using (true);
+
+create policy "Auth read client_invoices" on client_invoices for select to authenticated using (true);
+create policy "Auth insert client_invoices" on client_invoices for insert to authenticated with check (true);
+create policy "Auth update client_invoices" on client_invoices for update to authenticated using (true);
+create policy "Auth delete client_invoices" on client_invoices for delete to authenticated using (true);
 
 -- ============================================
 -- SEED: Default employees

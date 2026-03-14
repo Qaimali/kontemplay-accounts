@@ -108,9 +108,21 @@ export default function TransactionsPage() {
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTxn, setEditingTxn] = useState<Transaction | null>(null);
+  const [editType, setEditType] = useState<TransactionType>("client_payment");
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editReferenceMonth, setEditReferenceMonth] = useState("");
+  const [editOwnerId, setEditOwnerId] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   // Form state
   const [formType, setFormType] = useState<TransactionType>("client_payment");
@@ -168,9 +180,16 @@ export default function TransactionsPage() {
       if (filterDateFrom && txn.created_at < filterDateFrom) return false;
       if (filterDateTo && txn.created_at > filterDateTo + "T23:59:59") return false;
 
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const desc = (txn.description ?? "").toLowerCase();
+        const typeLabel = typeLabels[txn.type].toLowerCase();
+        if (!desc.includes(q) && !typeLabel.includes(q)) return false;
+      }
+
       return true;
     });
-  }, [allTransactions, filterType, filterYear, filterMonth, filterDateFrom, filterDateTo]);
+  }, [allTransactions, filterType, filterYear, filterMonth, filterDateFrom, filterDateTo, searchQuery]);
 
   // Totals
   const totalCredits = useMemo(
@@ -270,26 +289,81 @@ export default function TransactionsPage() {
     fetchTransactions();
   }
 
+  function openEditDialog(txn: Transaction) {
+    setEditingTxn(txn);
+    setEditType(txn.type);
+    setEditAmount(txn.amount_pkr.toString());
+    setEditDescription(txn.description ?? "");
+    setEditDate(new Date(txn.created_at).toISOString().slice(0, 10));
+    setEditReferenceMonth(txn.reference_month ?? "");
+    setEditOwnerId(txn.owner_id ?? "");
+    setEditDialogOpen(true);
+  }
+
+  async function handleEditSave() {
+    if (!editingTxn) return;
+    const amount = parseFloat(editAmount);
+    if (!amount || amount <= 0) return;
+
+    setEditSaving(true);
+
+    const isCredit = isCreditType(editType);
+    const needsOwner = editType === "owner_investment" || editType === "owner_repayment";
+
+    const { error } = await supabase
+      .from("transactions")
+      .update({
+        type: editType,
+        amount_pkr: amount,
+        is_credit: isCredit,
+        description: editDescription || null,
+        reference_month: editReferenceMonth || null,
+        owner_id: needsOwner && editOwnerId ? editOwnerId : null,
+        created_at: editDate ? `${editDate}T00:00:00+05:00` : undefined,
+      })
+      .eq("id", editingTxn.id);
+
+    setEditSaving(false);
+
+    if (!error) {
+      setEditDialogOpen(false);
+      setEditingTxn(null);
+      fetchTransactions();
+    }
+  }
+
   function clearFilters() {
     setFilterType("");
     setFilterYear("");
     setFilterMonth("");
     setFilterDateFrom("");
     setFilterDateTo("");
+    setSearchQuery("");
   }
 
-  const hasFilters = filterType || filterYear || filterMonth || filterDateFrom || filterDateTo;
+  const hasFilters = filterType || filterYear || filterMonth || filterDateFrom || filterDateTo || searchQuery;
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <div className="col-span-2 space-y-1.5 sm:col-span-1">
+          <Label>Search</Label>
+          <Input
+            type="text"
+            placeholder="Search description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sm:w-[200px]"
+          />
+        </div>
+
         <div className="space-y-1.5">
           <Label>Type</Label>
           <Select value={filterType} onValueChange={(v) => setFilterType(v ?? "")}>
-            <SelectTrigger className="w-[170px]">
+            <SelectTrigger className="sm:w-[170px]">
               <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
@@ -306,7 +380,7 @@ export default function TransactionsPage() {
         <div className="space-y-1.5">
           <Label>Year</Label>
           <Select value={filterYear} onValueChange={(v) => setFilterYear(v ?? "")}>
-            <SelectTrigger className="w-[110px]">
+            <SelectTrigger className="sm:w-[110px]">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -321,7 +395,7 @@ export default function TransactionsPage() {
         <div className="space-y-1.5">
           <Label>Month</Label>
           <Select value={filterMonth} onValueChange={(v) => setFilterMonth(v ?? "")}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="sm:w-[140px]">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent>
@@ -339,7 +413,7 @@ export default function TransactionsPage() {
             type="date"
             value={filterDateFrom}
             onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="w-[150px]"
+            className="sm:w-[150px]"
           />
         </div>
 
@@ -349,7 +423,7 @@ export default function TransactionsPage() {
             type="date"
             value={filterDateTo}
             onChange={(e) => setFilterDateTo(e.target.value)}
-            className="w-[150px]"
+            className="sm:w-[150px]"
           />
         </div>
 
@@ -549,117 +623,259 @@ export default function TransactionsPage() {
               No transactions found.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={transactions.length > 0 && selected.size === transactions.length}
-                      onCheckedChange={toggleAll}
-                    />
-                  </TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Month</TableHead>
-                  <TableHead className="text-right">Credit</TableHead>
-                  <TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((txn) => (
-                  <TableRow key={txn.id} className={selected.has(txn.id) ? "bg-muted/50" : ""}>
-                    <TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">
                       <Checkbox
-                        checked={selected.has(txn.id)}
-                        onCheckedChange={() => toggleSelect(txn.id)}
+                        checked={transactions.length > 0 && selected.size === transactions.length}
+                        onCheckedChange={toggleAll}
                       />
-                    </TableCell>
-                    <TableCell>
-                      {new Date(txn.created_at).toLocaleDateString("en-PK", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={typeBadgeVariant[txn.type]}>
-                        {typeLabels[txn.type]}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[300px] truncate">
-                      {txn.description ?? "-"}
-                    </TableCell>
-                    <TableCell>
-                      {txn.reference_month
-                        ? formatMonth(txn.reference_month)
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {txn.is_credit ? (
-                        <span className="font-mono text-emerald-400">
-                          {formatPKR(txn.amount_pkr)}
-                        </span>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {!txn.is_credit ? (
-                        <span className="font-mono text-red-400">
-                          {formatPKR(txn.amount_pkr)}
-                        </span>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-red-400 h-7 w-7 p-0"
-                        onClick={() => handleDeleteSingle(txn.id)}
-                      >
-                        ×
-                      </Button>
-                    </TableCell>
+                    </TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="hidden sm:table-cell">Description</TableHead>
+                    <TableHead className="hidden md:table-cell">Month</TableHead>
+                    <TableHead className="text-right">Credit</TableHead>
+                    <TableHead className="text-right">Debit</TableHead>
+                    <TableHead className="w-20"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={5} className="text-right font-semibold">
-                    Totals
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="font-mono font-semibold text-emerald-400">
-                      {formatPKR(totalCredits)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span className="font-mono font-semibold text-red-400">
-                      {formatPKR(totalDebits)}
-                    </span>
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={5} className="text-right font-semibold">
-                    Net
-                  </TableCell>
-                  <TableCell colSpan={2} className="text-right">
-                    <span className={`font-mono font-bold text-base ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                      {net >= 0 ? "+" : ""}{formatPKR(net)}
-                    </span>
-                  </TableCell>
-                  <TableCell />
-                </TableRow>
-              </TableFooter>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((txn) => (
+                    <TableRow key={txn.id} className={selected.has(txn.id) ? "bg-muted/50" : ""}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selected.has(txn.id)}
+                          onCheckedChange={() => toggleSelect(txn.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {new Date(txn.created_at).toLocaleDateString("en-PK", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={typeBadgeVariant[txn.type]}>
+                          {typeLabels[txn.type]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[300px] truncate hidden sm:table-cell">
+                        {txn.description ?? "-"}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {txn.reference_month
+                          ? formatMonth(txn.reference_month)
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        {txn.is_credit ? (
+                          <span className="font-mono text-emerald-400">
+                            {formatPKR(txn.amount_pkr)}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        {!txn.is_credit ? (
+                          <span className="font-mono text-red-400">
+                            {formatPKR(txn.amount_pkr)}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
+                            onClick={() => openEditDialog(txn)}
+                            title="Edit"
+                          >
+                            ✎
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-red-400 h-7 w-7 p-0"
+                            onClick={() => handleDeleteSingle(txn.id)}
+                            title="Delete"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-semibold sm:hidden">
+                      Totals
+                    </TableCell>
+                    <TableCell colSpan={4} className="text-right font-semibold hidden sm:table-cell md:hidden">
+                      Totals
+                    </TableCell>
+                    <TableCell colSpan={5} className="text-right font-semibold hidden md:table-cell">
+                      Totals
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <span className="font-mono font-semibold text-emerald-400">
+                        {formatPKR(totalCredits)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <span className="font-mono font-semibold text-red-400">
+                        {formatPKR(totalDebits)}
+                      </span>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-semibold sm:hidden">
+                      Net
+                    </TableCell>
+                    <TableCell colSpan={4} className="text-right font-semibold hidden sm:table-cell md:hidden">
+                      Net
+                    </TableCell>
+                    <TableCell colSpan={5} className="text-right font-semibold hidden md:table-cell">
+                      Net
+                    </TableCell>
+                    <TableCell colSpan={2} className="text-right whitespace-nowrap">
+                      <span className={`font-mono font-bold text-base ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {net >= 0 ? "+" : ""}{formatPKR(net)}
+                      </span>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+            <DialogDescription>
+              Update the transaction details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select
+                value={editType}
+                onValueChange={(v) => { if (v) setEditType(v as TransactionType); }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={typeLabels[editType]} />
+                </SelectTrigger>
+                <SelectContent>
+                  {allFilterTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Amount (PKR)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="0"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Input
+                type="text"
+                placeholder="Optional description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Transaction Date</Label>
+              <Input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Reference Month</Label>
+              <Input
+                type="text"
+                placeholder="YYYY-MM"
+                value={editReferenceMonth}
+                onChange={(e) => setEditReferenceMonth(e.target.value)}
+              />
+            </div>
+
+            {(editType === "owner_investment" || editType === "owner_repayment") && (
+              <div className="space-y-1.5">
+                <Label>Owner</Label>
+                <Select
+                  value={editOwnerId}
+                  onValueChange={(v) => setEditOwnerId(v ?? "")}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={owners.find((o) => o.id === editOwnerId)?.name ?? "Select owner"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {owners.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="text-sm text-muted-foreground">
+              This will be recorded as a{" "}
+              <span
+                className={
+                  isCreditType(editType)
+                    ? "font-medium text-emerald-400"
+                    : "font-medium text-red-400"
+                }
+              >
+                {isCreditType(editType) ? "Credit" : "Debit"}
+              </span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={handleEditSave} disabled={editSaving}>
+              {editSaving ? "Saving..." : "Update Transaction"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

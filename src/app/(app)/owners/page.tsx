@@ -175,7 +175,7 @@ export default function OwnersPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Owners</h1>
         <div className="flex gap-2">
           <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
@@ -457,7 +457,7 @@ export default function OwnersPage() {
                 {isExpanded && (
                   <CardContent className="pt-0 space-y-4">
                     {/* Summary row */}
-                    <div className="flex gap-6 rounded-lg bg-muted/30 px-4 py-3">
+                    <div className="flex flex-wrap gap-4 rounded-lg bg-muted/30 px-4 py-3 sm:gap-6">
                       <div>
                         <p className="text-xs text-muted-foreground">
                           Invested
@@ -494,12 +494,13 @@ export default function OwnersPage() {
                         No transactions recorded.
                       </p>
                     ) : (
+                      <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Date</TableHead>
                             <TableHead>Type</TableHead>
-                            <TableHead>Description</TableHead>
+                            <TableHead className="hidden sm:table-cell">Description</TableHead>
                             <TableHead className="text-right">
                               Amount
                             </TableHead>
@@ -508,7 +509,7 @@ export default function OwnersPage() {
                         <TableBody>
                           {owner.transactions.map((txn) => (
                             <TableRow key={txn.id}>
-                              <TableCell className="text-muted-foreground">
+                              <TableCell className="text-muted-foreground whitespace-nowrap">
                                 {new Date(txn.created_at).toLocaleDateString(
                                   "en-PK",
                                   {
@@ -531,10 +532,10 @@ export default function OwnersPage() {
                                     : "Repayment"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="max-w-[300px] truncate">
+                              <TableCell className="max-w-[300px] truncate hidden sm:table-cell">
                                 {txn.description ?? "-"}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right whitespace-nowrap">
                                 <span
                                   className={`font-mono font-medium ${
                                     txn.type === "owner_investment"
@@ -550,6 +551,7 @@ export default function OwnersPage() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     )}
                   </CardContent>
                 )}

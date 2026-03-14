@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Owner } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
 import { SidebarNav } from "./sidebar-nav";
+import { MobileSidebar } from "./mobile-sidebar";
 
 export default async function AppLayout({
   children,
@@ -35,8 +36,8 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <aside className="flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
           <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary font-bold text-sidebar-primary-foreground text-sm">
@@ -67,9 +68,14 @@ export default async function AppLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl p-8">{children}</div>
-      </main>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Mobile sidebar */}
+        <MobileSidebar displayName={displayName} initials={initials} />
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

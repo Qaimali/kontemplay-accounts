@@ -10,6 +10,7 @@ import {
   Crown,
   History,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const navLinks = [
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/owners", label: "Owners", icon: Crown },
+  { href: "/client-invoices", label: "Client Invoices", icon: FileText },
   { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 

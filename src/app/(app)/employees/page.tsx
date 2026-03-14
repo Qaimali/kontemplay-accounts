@@ -236,9 +236,9 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
-        <Button onClick={openAdd}>Add Employee</Button>
+        <Button onClick={openAdd} className="shrink-0">Add Employee</Button>
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -429,14 +429,15 @@ export default function EmployeesPage() {
                       <p className="text-sm text-muted-foreground py-2">No invoices yet for this employee.</p>
                     ) : (
                       <>
+                        <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>Month</TableHead>
                               <TableHead className="text-right">USD</TableHead>
-                              <TableHead className="text-right">Rate</TableHead>
-                              <TableHead className="text-right">Gross PKR</TableHead>
-                              <TableHead className="text-right">Tax</TableHead>
+                              <TableHead className="text-right hidden sm:table-cell">Rate</TableHead>
+                              <TableHead className="text-right hidden sm:table-cell">Gross PKR</TableHead>
+                              <TableHead className="text-right hidden md:table-cell">Tax</TableHead>
                               <TableHead className="text-right">Net PKR</TableHead>
                               <TableHead className="w-10"></TableHead>
                             </TableRow>
@@ -450,13 +451,13 @@ export default function EmployeesPage() {
                                 <TableCell className="text-right font-mono">
                                   ${inv.salary_usd}
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
+                                <TableCell className="text-right font-mono hidden sm:table-cell">
                                   {formatNumber(inv.rate_applied, 2)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
+                                <TableCell className="text-right font-mono hidden sm:table-cell">
                                   {formatPKR(inv.gross_pkr)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono text-red-400">
+                                <TableCell className="text-right font-mono text-red-400 hidden md:table-cell">
                                   -{formatPKR(inv.total_tax_pkr)}
                                 </TableCell>
                                 <TableCell className="text-right font-mono font-semibold text-emerald-400">
@@ -487,6 +488,7 @@ export default function EmployeesPage() {
                             ))}
                           </TableBody>
                         </Table>
+                        </div>
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30 text-sm">
                           <span className="text-muted-foreground">
                             {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
