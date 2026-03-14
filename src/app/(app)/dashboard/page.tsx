@@ -42,7 +42,7 @@ function Tip({ text }: { text: string }) {
   return (
     <span className="relative group cursor-help ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-muted text-muted-foreground text-[10px] font-bold border">
       ?
-      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 rounded-md bg-foreground text-background text-xs leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg">
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 rounded-md bg-foreground text-background text-xs leading-relaxed opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 shadow-lg whitespace-pre-line">
         {text}
       </span>
     </span>
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 Total Credits
-                <Tip text="Client payments + owner investments. All money that came into the company." />
+                <Tip text={`Client payments + owner investments. All money that came into the company.\n\nBreakdown:\n• Client payments (e.g. Dec 2025): ${formatPKR(allTxns.filter(t => t.type === 'client_payment').reduce((s,t) => s + t.amount_pkr, 0))}\n• Owner investments: ${formatPKR(allTxns.filter(t => t.type === 'owner_investment').reduce((s,t) => s + t.amount_pkr, 0))}`} />
               </span>
               <span className="font-medium text-green-600">
                 {formatPKR(totalCredits)}
@@ -152,7 +152,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 Total Debits
-                <Tip text="Salary payouts + contractor tax + expenses + owner repayments. All money that went out." />
+                <Tip text={`All money that went out of the company.\n\nBreakdown:\n• Salary payouts: ${formatPKR(allTxns.filter(t => t.type === 'salary_payout').reduce((s,t) => s + t.amount_pkr, 0))}\n• Contractor tax (FBR): ${formatPKR(allTxns.filter(t => t.type === 'contractor_tax').reduce((s,t) => s + t.amount_pkr, 0))}\n• Expenses: ${formatPKR(allTxns.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount_pkr, 0))}\n• Owner repayments: ${formatPKR(allTxns.filter(t => t.type === 'owner_repayment').reduce((s,t) => s + t.amount_pkr, 0))}`} />
               </span>
               <span className="font-medium text-red-600">
                 {formatPKR(totalDebits)}
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">
                   Available Balance
-                  <Tip text="Credits - Debits. Negative means the company has paid out more than it received." />
+                  <Tip text={`Credits (${formatPKR(totalCredits)}) minus Debits (${formatPKR(totalDebits)}) = ${formatPKR(availableBalance)}.\n\nNegative means the company has paid out more than it received.`} />
                 </span>
                 <span
                   className={`text-lg font-bold ${
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold">
                   Net Position
-                  <Tip text={`Available Balance (${formatPKR(availableBalance)}) minus Total Owed (${formatPKR(totalOwed)}). Shows the company's true financial position after accounting for owner debts.`} />
+                  <Tip text={`Available Balance (${formatPKR(availableBalance)}) minus Total Owed to Partners (${formatPKR(totalOwed)}) = ${formatPKR(netPosition)}.\n\nThis is the company's true position: cash balance minus what it owes to partners. Negative means the company is short on cash AND still owes partners.`} />
                 </span>
                 <span
                   className={`text-lg font-bold ${
