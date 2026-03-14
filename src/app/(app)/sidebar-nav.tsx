@@ -8,15 +8,19 @@ import {
   Receipt,
   Users,
   Crown,
+  History,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/distribute", label: "Distribute", icon: ArrowLeftRight },
+  { href: "/distributions", label: "Distributions", icon: History },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/employees", label: "Employees", icon: Users },
   { href: "/owners", label: "Owners", icon: Crown },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 
 export function SidebarNav() {

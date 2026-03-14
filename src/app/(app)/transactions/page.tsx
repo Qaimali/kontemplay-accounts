@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { formatPKR, formatMonth } from "@/lib/format";
+import { exportToCSV } from "@/lib/export";
 import type { Transaction, TransactionType, Owner } from "@/lib/types";
 import {
   Card,
@@ -355,6 +356,27 @@ export default function TransactionsPage() {
         {hasFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters} className="mb-0.5">
             Clear filters
+          </Button>
+        )}
+
+        {transactions.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mb-0.5"
+            onClick={() => {
+              const rows = transactions.map((txn) => ({
+                Date: new Date(txn.created_at).toLocaleDateString("en-PK"),
+                Type: typeLabels[txn.type],
+                Description: txn.description ?? "",
+                "Reference Month": txn.reference_month ?? "",
+                "Credit PKR": txn.is_credit ? txn.amount_pkr : "",
+                "Debit PKR": !txn.is_credit ? txn.amount_pkr : "",
+              }));
+              exportToCSV(rows, "transactions");
+            }}
+          >
+            Export CSV
           </Button>
         )}
       </div>
