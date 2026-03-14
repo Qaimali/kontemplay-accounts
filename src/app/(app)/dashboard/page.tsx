@@ -16,6 +16,15 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tip } from "@/components/ui/tip";
+import {
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  ArrowUpRight,
+  ArrowDownRight,
+} from "lucide-react";
 
 const typeLabels: Record<TransactionType, string> = {
   client_payment: "Client Payment",
@@ -38,12 +47,9 @@ const typeBadgeVariant: Record<
   expense: "destructive",
 };
 
-import { Tip } from "@/components/tip";
-
 export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient();
 
-  // Fetch transactions and owners in parallel
   const [{ data: transactions }, { data: owners }] = await Promise.all([
     supabase
       .from("transactions")
@@ -56,13 +62,11 @@ export default async function DashboardPage() {
   const allTxns = transactions ?? [];
   const allOwners = owners ?? [];
 
-  // Owner name lookup
   const ownerNames: Record<string, string> = {};
   for (const o of allOwners) {
     ownerNames[o.id] = o.name;
   }
 
-  // --- Company Balance ---
   const totalCredits = allTxns
     .filter((t) => t.is_credit)
     .reduce((sum, t) => sum + t.amount_pkr, 0);
@@ -73,7 +77,6 @@ export default async function DashboardPage() {
 
   const availableBalance = totalCredits - totalDebits;
 
-  // --- Owner Liabilities ---
   const ownerMap = new Map<
     string,
     { name: string; invested: number; repaid: number }
@@ -113,125 +116,139 @@ export default async function DashboardPage() {
   const totalOwed = ownerLiabilities.reduce((sum, o) => sum + o.owed, 0);
   const netPosition = availableBalance - totalOwed;
 
-  // --- Recent Transactions ---
   const recentTxns = allTxns.slice(0, 10);
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Financial overview and recent activity
+        </p>
+      </div>
 
-      {/* Balance Cards */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Company Balance Card */}
+      {/* Metric Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>
-              Company Balance
-              <Tip text="Sum of all money in (credits) minus all money out (debits). Includes client payments, owner investments, salary payouts, taxes, and expenses." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 Total Credits
-                <Tip text={`Client payments + owner investments. All money that came into the company.\n\nBreakdown:\n• Client payments (e.g. Dec 2025): ${formatPKR(allTxns.filter(t => t.type === 'client_payment').reduce((s,t) => s + t.amount_pkr, 0))}\n• Owner investments: ${formatPKR(allTxns.filter(t => t.type === 'owner_investment').reduce((s,t) => s + t.amount_pkr, 0))}`} />
+                <Tip text={`Client payments + owner investments.\n\n- Client payments: ${formatPKR(allTxns.filter(t => t.type === 'client_payment').reduce((s, t) => s + t.amount_pkr, 0))}\n- Owner investments: ${formatPKR(allTxns.filter(t => t.type === 'owner_investment').reduce((s, t) => s + t.amount_pkr, 0))}`} />
               </span>
-              <span className="font-medium text-green-600">
-                {formatPKR(totalCredits)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Total Debits
-                <Tip text={`All money that went out of the company.\n\nBreakdown:\n• Salary payouts: ${formatPKR(allTxns.filter(t => t.type === 'salary_payout').reduce((s,t) => s + t.amount_pkr, 0))}\n• Contractor tax (FBR): ${formatPKR(allTxns.filter(t => t.type === 'contractor_tax').reduce((s,t) => s + t.amount_pkr, 0))}\n• Expenses: ${formatPKR(allTxns.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount_pkr, 0))}\n• Owner repayments: ${formatPKR(allTxns.filter(t => t.type === 'owner_repayment').reduce((s,t) => s + t.amount_pkr, 0))}`} />
-              </span>
-              <span className="font-medium text-red-600">
-                {formatPKR(totalDebits)}
-              </span>
-            </div>
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">
-                  Available Balance
-                  <Tip text={`Credits (${formatPKR(totalCredits)}) minus Debits (${formatPKR(totalDebits)}) = ${formatPKR(availableBalance)}.\n\nNegative means the company has paid out more than it received.`} />
-                </span>
-                <span
-                  className={`text-lg font-bold ${
-                    availableBalance >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {formatPKR(availableBalance)}
-                </span>
+              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10">
+                <TrendingUp className="size-4 text-emerald-400" />
               </div>
             </div>
+            <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-emerald-400">
+              {formatPKR(totalCredits)}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Owner Liabilities Card */}
         <Card>
-          <CardHeader>
-            <CardTitle>
-              Owner Liabilities
-              <Tip text="How much the company owes each partner. Calculated as: total invested by owner minus total repaid to owner." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {ownerLiabilities.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No owner loans recorded.
-              </p>
-            ) : (
-              ownerLiabilities.map((owner) => (
-                <div
-                  key={owner.id}
-                  className="flex items-center justify-between"
-                >
-                  <span className="text-sm text-muted-foreground">
-                    {owner.name}
-                    <Tip
-                      text={`Invested: ${formatPKR(owner.invested)} | Repaid: ${formatPKR(owner.repaid)} | Owed: ${formatPKR(owner.owed)}`}
-                    />
-                  </span>
-                  <span className="font-medium">{formatPKR(owner.owed)}</span>
-                </div>
-              ))
-            )}
-            <div className="border-t pt-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">
-                  Total Owed
-                  <Tip text="Sum of all outstanding owner loans. This is the total liability the company has to its partners." />
-                </span>
-                <span className="font-bold">{formatPKR(totalOwed)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">
-                  Net Position
-                  <Tip text={`Available Balance (${formatPKR(availableBalance)}) minus Total Owed to Partners (${formatPKR(totalOwed)}) = ${formatPKR(netPosition)}.\n\nThis is the company's true position: cash balance minus what it owes to partners. Negative means the company is short on cash AND still owes partners.`} />
-                </span>
-                <span
-                  className={`text-lg font-bold ${
-                    netPosition >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {formatPKR(netPosition)}
-                </span>
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Total Debits
+                <Tip text={`All money out.\n\n- Salaries: ${formatPKR(allTxns.filter(t => t.type === 'salary_payout').reduce((s, t) => s + t.amount_pkr, 0))}\n- Contractor tax: ${formatPKR(allTxns.filter(t => t.type === 'contractor_tax').reduce((s, t) => s + t.amount_pkr, 0))}\n- Expenses: ${formatPKR(allTxns.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount_pkr, 0))}\n- Repayments: ${formatPKR(allTxns.filter(t => t.type === 'owner_repayment').reduce((s, t) => s + t.amount_pkr, 0))}`} />
+              </span>
+              <div className="flex size-8 items-center justify-center rounded-lg bg-red-500/10">
+                <TrendingDown className="size-4 text-red-400" />
               </div>
             </div>
+            <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-red-400">
+              {formatPKR(totalDebits)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Available Balance
+                <Tip text={`Credits minus Debits. Negative = paid out more than received.`} />
+              </span>
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+                <Wallet className="size-4 text-primary" />
+              </div>
+            </div>
+            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${availableBalance >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {formatPKR(availableBalance)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Net Position
+                <Tip text={`Balance minus what's owed to partners. The company's true position.`} />
+              </span>
+              <div className="flex size-8 items-center justify-center rounded-lg bg-chart-3/10">
+                <Scale className="size-4 text-chart-3" />
+              </div>
+            </div>
+            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${netPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {formatPKR(netPosition)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
+      {/* Owner Liabilities */}
+      {ownerLiabilities.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="size-4 text-muted-foreground" />
+              Owner Liabilities
+              <Tip text="How much the company owes each partner. Invested minus repaid." />
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {ownerLiabilities.map((owner) => (
+              <div
+                key={owner.id}
+                className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5"
+              >
+                <span className="text-sm font-medium">
+                  {owner.name}
+                  <Tip text={`Invested: ${formatPKR(owner.invested)} | Repaid: ${formatPKR(owner.repaid)}`} />
+                </span>
+                <span className={`font-mono text-sm font-semibold ${owner.owed > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                  {formatPKR(owner.owed)}
+                </span>
+              </div>
+            ))}
+            <div className="border-t border-border/50 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Total Owed</span>
+                <span className="font-mono font-bold">{formatPKR(totalOwed)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Recent Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowUpRight className="size-4 text-muted-foreground" />
+            Recent Transactions
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {recentTxns.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No transactions yet.
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-muted/50">
+                <ArrowDownRight className="size-5 text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">No transactions yet.</p>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -245,7 +262,7 @@ export default async function DashboardPage() {
               <TableBody>
                 {recentTxns.map((txn) => (
                   <TableRow key={txn.id}>
-                    <TableCell>
+                    <TableCell className="text-muted-foreground">
                       {new Date(txn.created_at).toLocaleDateString("en-PK", {
                         day: "2-digit",
                         month: "short",
@@ -264,11 +281,7 @@ export default async function DashboardPage() {
                           : "-")}
                     </TableCell>
                     <TableCell className="text-right">
-                      <span
-                        className={
-                          txn.is_credit ? "text-green-600" : "text-red-600"
-                        }
-                      >
+                      <span className={`font-mono font-medium ${txn.is_credit ? "text-emerald-400" : "text-red-400"}`}>
                         {txn.is_credit ? "+" : "-"}
                         {formatPKR(txn.amount_pkr)}
                       </span>

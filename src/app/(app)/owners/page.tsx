@@ -158,7 +158,7 @@ export default function OwnersPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Owners</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Owners</h1>
         <div className="flex gap-2">
           <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
             <DialogTrigger
@@ -405,7 +405,7 @@ export default function OwnersPage() {
                   <span className="text-sm text-muted-foreground">
                     Total Invested
                   </span>
-                  <span className="font-medium text-green-600">
+                  <span className="font-medium text-emerald-400">
                     {formatPKR(owner.totalInvested)}
                   </span>
                 </div>
@@ -413,7 +413,7 @@ export default function OwnersPage() {
                   <span className="text-sm text-muted-foreground">
                     Total Repaid
                   </span>
-                  <span className="font-medium text-red-600">
+                  <span className="font-medium text-red-400">
                     {formatPKR(owner.totalRepaid)}
                   </span>
                 </div>
@@ -425,8 +425,8 @@ export default function OwnersPage() {
                     <span
                       className={`text-lg font-bold ${
                         owner.outstanding > 0
-                          ? "text-amber-600"
-                          : "text-green-600"
+                          ? "text-amber-400"
+                          : "text-emerald-400"
                       }`}
                     >
                       {formatPKR(owner.outstanding)}

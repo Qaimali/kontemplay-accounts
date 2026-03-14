@@ -135,7 +135,7 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Employees</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
         <Button onClick={openAdd}>Add Employee</Button>
       </div>
 

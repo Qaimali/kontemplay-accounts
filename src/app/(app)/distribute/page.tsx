@@ -243,7 +243,7 @@ export default function DistributePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-bold">Distribute</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Distribute</h1>
         <div className="flex gap-2">
           {(["input", "employees", "preview"] as Step[]).map((s, i) => (
             <Badge key={s} variant={step === s ? "default" : "outline"}>
@@ -532,7 +532,7 @@ export default function DistributePage() {
                 <div>Total before tax:</div>
                 <div className="text-right font-mono">{formatPKR(result.company.total_before_tax)}</div>
                 <div>Remittance tax ({remittanceTax}%):</div>
-                <div className="text-right font-mono text-red-600">
+                <div className="text-right font-mono text-red-400">
                   -{formatPKR(result.company.remittance_tax_amount)}
                 </div>
                 <div className="font-bold">Company Net:</div>
@@ -567,7 +567,7 @@ export default function DistributePage() {
               </div>
 
               {result.summary.is_balanced ? (
-                <Badge className="mt-4 bg-green-600">Balanced (diff: {formatNumber(result.summary.difference, 2)} PKR)</Badge>
+                <Badge className="mt-4 bg-emerald-500">Balanced (diff: {formatNumber(result.summary.difference, 2)} PKR)</Badge>
               ) : (
                 <Badge variant="destructive" className="mt-4">
                   UNBALANCED — Difference: {formatPKR(result.summary.difference)}

@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 export function Tip({ text }: { text: string }) {
   const [show, setShow] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function handleEnter() {
     if (ref.current) {
@@ -28,10 +33,10 @@ export function Tip({ text }: { text: string }) {
     >
       ?
       {show &&
-        typeof window !== "undefined" &&
+        mounted &&
         createPortal(
           <div
-            className="fixed z-[9999] w-80 p-3 rounded-lg bg-popover text-popover-foreground text-xs leading-relaxed shadow-xl ring-1 ring-border whitespace-pre-line"
+            className="fixed z-[9999] w-80 p-3 rounded-lg bg-zinc-900 text-white text-xs leading-relaxed shadow-xl whitespace-pre-line"
             style={{
               top: pos.top,
               left: pos.left,

@@ -181,7 +181,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4">
@@ -323,8 +323,8 @@ export default function TransactionsPage() {
                     <span
                       className={
                         isCreditType(formType)
-                          ? "font-medium text-green-600"
-                          : "font-medium text-red-600"
+                          ? "font-medium text-emerald-400"
+                          : "font-medium text-red-400"
                       }
                     >
                       {isCreditType(formType) ? "Credit" : "Debit"}
@@ -395,7 +395,7 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {txn.is_credit ? (
-                        <span className="text-green-600">
+                        <span className="font-mono text-emerald-400">
                           {formatPKR(txn.amount_pkr)}
                         </span>
                       ) : (
@@ -404,7 +404,7 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       {!txn.is_credit ? (
-                        <span className="text-red-600">
+                        <span className="font-mono text-red-400">
                           {formatPKR(txn.amount_pkr)}
                         </span>
                       ) : (
