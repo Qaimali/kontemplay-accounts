@@ -79,11 +79,16 @@ export interface Transaction {
   employee?: Employee;
 }
 
+export type ClientInvoiceStatus = "draft" | "sent" | "received" | "overdue";
+
 export interface ClientInvoice {
   id: string;
   invoice_number: number;
   bill_to: string;
   date: string;
+  invoice_month: string | null;
+  status: ClientInvoiceStatus;
+  due_date: string | null;
   line_items: { description: string; subtitle?: string; quantity: number; rate: number }[];
   tax_percent: number;
   subtotal: number;

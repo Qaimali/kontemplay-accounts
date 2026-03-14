@@ -104,6 +104,9 @@ create table client_invoices (
   invoice_number integer not null,
   bill_to text not null default 'Youth Athletes United',
   date date not null,
+  invoice_month text, -- e.g. '2026-02'
+  status text not null default 'draft', -- draft, sent, received, overdue
+  due_date date, -- payment due date
   line_items jsonb not null, -- [{description, subtitle?, quantity, rate}]
   tax_percent numeric(5,2) default 0,
   subtotal numeric(14,2) not null,

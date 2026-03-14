@@ -5,7 +5,8 @@ import Link from "next/link";
 import { pdf } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/client";
 import { ClientInvoicePDF } from "@/lib/client-invoice-pdf";
-import type { ClientInvoice } from "@/lib/types";
+import { formatMonth } from "@/lib/format";
+import type { ClientInvoice, ClientInvoiceStatus } from "@/lib/types";
 import {
   Card,
   CardHeader,
@@ -21,17 +22,42 @@ import {
   TableBody,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, Trash2, Pencil } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Download, Trash2, Pencil, CheckCircle } from "lucide-react";
 
 function fmtUSD(n: number) {
   return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+const statusBadge: Record<ClientInvoiceStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  draft: { label: "Draft", variant: "outline" },
+  sent: { label: "Sent", variant: "secondary" },
+  received: { label: "Received", variant: "default" },
+  overdue: { label: "Overdue", variant: "destructive" },
+};
+
 export default function ClientInvoicesPage() {
   const supabase = createClient();
   const [invoices, setInvoices] = useState<ClientInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Receive dialog
+  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [receivingInvoice, setReceivingInvoice] = useState<ClientInvoice | null>(null);
+  const [receiveAmountPkr, setReceiveAmountPkr] = useState("");
+  const [receiveProcessing, setReceiveProcessing] = useState(false);
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -77,6 +103,54 @@ export default function ClientInvoicesPage() {
     fetchInvoices();
   }
 
+  async function cycleStatus(inv: ClientInvoice) {
+    // draft -> sent -> received (opens dialog)
+    if (inv.status === "draft" || inv.status === "overdue") {
+      await supabase.from("client_invoices").update({ status: "sent" }).eq("id", inv.id);
+      fetchInvoices();
+    } else if (inv.status === "sent") {
+      openReceiveDialog(inv);
+    }
+    // received: no cycle, already final
+  }
+
+  function openReceiveDialog(inv: ClientInvoice) {
+    setReceivingInvoice(inv);
+    setReceiveAmountPkr("");
+    setReceiveDialogOpen(true);
+  }
+
+  async function handleMarkReceived() {
+    if (!receivingInvoice) return;
+    const amount = parseFloat(receiveAmountPkr);
+    if (!amount || amount <= 0) return;
+
+    setReceiveProcessing(true);
+
+    const month = receivingInvoice.invoice_month ?? undefined;
+
+    // Create client_payment credit transaction
+    await supabase.from("transactions").insert({
+      type: "client_payment",
+      amount_pkr: amount,
+      is_credit: true,
+      description: `Invoice #${receivingInvoice.invoice_number} - ${receivingInvoice.bill_to}${month ? ` (${month})` : ""}`,
+      reference_month: month,
+      created_at: new Date().toISOString(),
+    });
+
+    // Update invoice status to received
+    await supabase
+      .from("client_invoices")
+      .update({ status: "received" })
+      .eq("id", receivingInvoice.id);
+
+    setReceiveProcessing(false);
+    setReceiveDialogOpen(false);
+    setReceivingInvoice(null);
+    fetchInvoices();
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">Client Invoices</h1>
@@ -115,76 +189,148 @@ export default function ClientInvoicesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">#</TableHead>
-                  <TableHead>Bill To</TableHead>
-                  <TableHead className="hidden sm:table-cell">Date</TableHead>
-                  <TableHead className="text-center hidden sm:table-cell">Items</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="w-28"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-medium">{inv.invoice_number}</TableCell>
-                    <TableCell>{inv.bill_to}</TableCell>
-                    <TableCell className="hidden sm:table-cell whitespace-nowrap">
-                      {new Date(inv.date + "T00:00:00").toLocaleDateString("en-US", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </TableCell>
-                    <TableCell className="text-center hidden sm:table-cell">
-                      {inv.line_items.length}
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <span className="font-mono font-semibold text-emerald-400">
-                        {fmtUSD(inv.total)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                          render={<Link href={`/client-invoices/${inv.id}`} />}
-                          title="Edit"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleDownload(inv)}
-                          title="Download PDF"
-                        >
-                          <Download className="size-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
-                          onClick={() => handleDelete(inv.id)}
-                          title="Delete"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16">#</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="hidden sm:table-cell">Bill To</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden sm:table-cell">Due</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="w-32"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {invoices.map((inv) => {
+                    const st = statusBadge[inv.status] ?? statusBadge.draft;
+                    const isOverdue =
+                      inv.status !== "received" &&
+                      inv.due_date &&
+                      new Date(inv.due_date + "T00:00:00") < new Date();
+
+                    return (
+                      <TableRow key={inv.id}>
+                        <TableCell className="font-medium">{inv.invoice_number}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {inv.invoice_month ? formatMonth(inv.invoice_month) : "-"}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">{inv.bill_to}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={isOverdue ? "destructive" : st.variant}
+                            className={inv.status !== "received" ? "cursor-pointer hover:opacity-80" : ""}
+                            onClick={() => inv.status !== "received" && cycleStatus(inv)}
+                            title={inv.status === "draft" || inv.status === "overdue" ? "Click to mark as Sent" : inv.status === "sent" ? "Click to mark as Received" : ""}
+                          >
+                            {isOverdue ? "Overdue" : st.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell whitespace-nowrap">
+                          {inv.due_date
+                            ? new Date(inv.due_date + "T00:00:00").toLocaleDateString("en-US", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <span className="font-mono font-semibold text-emerald-400">
+                            {fmtUSD(inv.total)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            {inv.status !== "received" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-emerald-400"
+                                onClick={() => openReceiveDialog(inv)}
+                                title="Mark as Received"
+                              >
+                                <CheckCircle className="size-3.5" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              render={<Link href={`/client-invoices/${inv.id}`} />}
+                              title="Edit"
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleDownload(inv)}
+                              title="Download PDF"
+                            >
+                              <Download className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
+                              onClick={() => handleDelete(inv.id)}
+                              title="Delete"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Mark as Received Dialog */}
+      <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark as Received</DialogTitle>
+            <DialogDescription>
+              Invoice #{receivingInvoice?.invoice_number} — {fmtUSD(receivingInvoice?.total ?? 0)}
+              {receivingInvoice?.invoice_month && (
+                <> for {formatMonth(receivingInvoice.invoice_month)}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Amount Received (PKR)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="Enter PKR amount received"
+                value={receiveAmountPkr}
+                onChange={(e) => setReceiveAmountPkr(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                This will create a Client Payment credit transaction in the ledger.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+            <Button
+              onClick={handleMarkReceived}
+              disabled={receiveProcessing || !receiveAmountPkr || parseFloat(receiveAmountPkr) <= 0}
+            >
+              {receiveProcessing ? "Processing..." : "Confirm Received"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

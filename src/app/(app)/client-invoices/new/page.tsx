@@ -107,6 +107,11 @@ export default function NewClientInvoicePage() {
     return { ...item };
   });
 
+  // Default due date: 10th of the month after invoiceMonth
+  const [ym, mm] = nextMonth.split("-").map(Number);
+  const dueDateObj = new Date(ym, mm, 10); // mm is already 1-indexed, so this is next month
+  const defaultDueDate = dueDateObj.toISOString().slice(0, 10);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold tracking-tight">New Client Invoice</h1>
@@ -117,6 +122,8 @@ export default function NewClientInvoicePage() {
           billTo: "Youth Athletes United",
           date: new Date().toISOString().slice(0, 10),
           invoiceMonth: nextMonth,
+          status: "draft",
+          dueDate: defaultDueDate,
           taxPercent: "0",
           notes: BANK_NOTES,
           lineItems,

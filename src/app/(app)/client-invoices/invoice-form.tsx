@@ -17,6 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { Trash2, Plus, Download, Save } from "lucide-react";
 
 function monthToRange(ym: string): string {
@@ -39,11 +46,20 @@ interface InvoiceFormProps {
     billTo: string;
     date: string;
     invoiceMonth: string;
+    status: string;
+    dueDate: string;
     taxPercent: string;
     notes: string;
     lineItems: ClientInvoiceLineItem[];
   };
 }
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "received", label: "Received" },
+  { value: "overdue", label: "Overdue" },
+];
 
 export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
   const supabase = createClient();
@@ -53,6 +69,8 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
   const [billTo, setBillTo] = useState(initialData.billTo);
   const [date, setDate] = useState(initialData.date);
   const [invoiceMonth, setInvoiceMonth] = useState(initialData.invoiceMonth);
+  const [status, setStatus] = useState(initialData.status);
+  const [dueDate, setDueDate] = useState(initialData.dueDate);
   const [taxPercent, setTaxPercent] = useState(initialData.taxPercent);
   const [notes, setNotes] = useState(initialData.notes);
   const [lineItems, setLineItems] = useState<ClientInvoiceLineItem[]>(initialData.lineItems);
@@ -100,6 +118,9 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
       invoice_number: parseInt(invoiceNumber) || 1,
       bill_to: billTo,
       date,
+      invoice_month: invoiceMonth || null,
+      status,
+      due_date: dueDate || null,
       line_items: lineItems,
       tax_percent: parseFloat(taxPercent) || 0,
       subtotal,
@@ -168,7 +189,7 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
             <CardTitle>Invoice Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="space-y-1">
                 <Label className="text-xs">Invoice #</Label>
                 <Input
@@ -200,6 +221,29 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
                   type="text"
                   value={billTo}
                   onChange={(e) => setBillTo(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
+                <Select value={status} onValueChange={(v) => { if (v) setStatus(v); }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={STATUS_OPTIONS.find((s) => s.value === status)?.label ?? "Draft"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Due Date</Label>
+                <Input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
