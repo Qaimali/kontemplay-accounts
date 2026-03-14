@@ -4,12 +4,12 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-sans",
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
+  variable: "--font-jetbrains",
   subsets: ["latin"],
 });
 
@@ -24,10 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+    <html lang="en" className={`dark ${plusJakarta.variable} ${jetbrainsMono.variable}`}>
+      <body className="antialiased">
+
         {children}
         <Toaster />
       </body>

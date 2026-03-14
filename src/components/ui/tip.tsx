@@ -36,7 +36,7 @@ export function Tip({ text }: { text: string }) {
         mounted &&
         createPortal(
           <div
-            className="fixed z-[9999] w-80 p-3 rounded-lg bg-zinc-900 text-white text-xs leading-relaxed shadow-xl whitespace-pre-line"
+            className="fixed z-[9999] w-80 p-3 rounded-lg bg-popover text-popover-foreground text-xs font-sans leading-relaxed shadow-xl ring-1 ring-border/50 whitespace-pre-line backdrop-blur-md"
             style={{
               top: pos.top,
               left: pos.left,

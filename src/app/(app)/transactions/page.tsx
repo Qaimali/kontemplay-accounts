@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogTrigger,
@@ -89,6 +90,10 @@ export default function TransactionsPage() {
   const [owners, setOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Selection
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   // Filters
   const [filterType, setFilterType] = useState<string>("");
@@ -179,6 +184,52 @@ export default function TransactionsPage() {
   const showOwnerField =
     formType === "owner_investment" || formType === "owner_repayment";
 
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selected.size === transactions.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(transactions.map((t) => t.id)));
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (selected.size === 0) return;
+    const confirmed = window.confirm(
+      `Delete ${selected.size} transaction${selected.size > 1 ? "s" : ""}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .in("id", Array.from(selected));
+
+    if (!error) {
+      setSelected(new Set());
+      fetchTransactions();
+    }
+    setDeleting(false);
+  }
+
+  async function handleDeleteSingle(id: string) {
+    const confirmed = window.confirm("Delete this transaction? This cannot be undone.");
+    if (!confirmed) return;
+
+    await supabase.from("transactions").delete().eq("id", id);
+    setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
+    fetchTransactions();
+  }
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
@@ -213,6 +264,24 @@ export default function TransactionsPage() {
           />
         </div>
       </div>
+
+      {/* Bulk Actions */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDeleteSelected}
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : `Delete ${selected.size}`}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </div>
+      )}
 
       {/* Transaction History */}
       <Card>
@@ -357,17 +426,30 @@ export default function TransactionsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={transactions.length > 0 && selected.size === transactions.length}
+                      onCheckedChange={toggleAll}
+                    />
+                  </TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Reference Month</TableHead>
+                  <TableHead>Month</TableHead>
                   <TableHead className="text-right">Credit</TableHead>
                   <TableHead className="text-right">Debit</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.map((txn) => (
-                  <TableRow key={txn.id}>
+                  <TableRow key={txn.id} className={selected.has(txn.id) ? "bg-muted/50" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.has(txn.id)}
+                        onCheckedChange={() => toggleSelect(txn.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       {new Date(txn.created_at).toLocaleDateString("en-PK", {
                         day: "2-digit",
@@ -382,11 +464,6 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell className="max-w-[300px] truncate">
                       {txn.description ?? "-"}
-                      {txn.owner ? (
-                        <span className="ml-1 text-muted-foreground">
-                          ({txn.owner.name})
-                        </span>
-                      ) : null}
                     </TableCell>
                     <TableCell>
                       {txn.reference_month
@@ -410,6 +487,16 @@ export default function TransactionsPage() {
                       ) : (
                         "-"
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-red-400 h-7 w-7 p-0"
+                        onClick={() => handleDeleteSingle(txn.id)}
+                      >
+                        ×
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

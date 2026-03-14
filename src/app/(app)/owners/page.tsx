@@ -11,6 +11,15 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -28,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 
 type TransactionForm = {
   owner_id: string;
@@ -47,6 +57,7 @@ type OwnerWithBalances = Owner & {
   totalInvested: number;
   totalRepaid: number;
   outstanding: number;
+  transactions: Transaction[];
 };
 
 export default function OwnersPage() {
@@ -54,6 +65,7 @@ export default function OwnersPage() {
   const [owners, setOwners] = useState<OwnerWithBalances[]>([]);
   const [rawOwners, setRawOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const [investDialogOpen, setInvestDialogOpen] = useState(false);
   const [repayDialogOpen, setRepayDialogOpen] = useState(false);
@@ -68,6 +80,7 @@ export default function OwnersPage() {
         .from("transactions")
         .select("*")
         .in("type", ["owner_investment", "owner_repayment"])
+        .order("created_at", { ascending: false })
         .returns<Transaction[]>(),
     ]);
 
@@ -92,6 +105,7 @@ export default function OwnersPage() {
         totalInvested,
         totalRepaid,
         outstanding: totalInvested - totalRepaid,
+        transactions: ownerTxns,
       };
     });
 
@@ -153,6 +167,10 @@ export default function OwnersPage() {
     setRepayDialogOpen(false);
     setRepayForm(emptyForm);
     await fetchData();
+  }
+
+  function toggleExpand(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
   }
 
   return (
@@ -393,49 +411,151 @@ export default function OwnersPage() {
       ) : owners.length === 0 ? (
         <p className="text-sm text-muted-foreground">No owners found.</p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {owners.map((owner) => (
-            <Card key={owner.id}>
-              <CardHeader>
-                <CardTitle>{owner.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{owner.email}</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Total Invested
-                  </span>
-                  <span className="font-medium text-emerald-400">
-                    {formatPKR(owner.totalInvested)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Total Repaid
-                  </span>
-                  <span className="font-medium text-red-400">
-                    {formatPKR(owner.totalRepaid)}
-                  </span>
-                </div>
-                <div className="border-t pt-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">
-                      Outstanding Balance
-                    </span>
-                    <span
-                      className={`text-lg font-bold ${
-                        owner.outstanding > 0
-                          ? "text-amber-400"
-                          : "text-emerald-400"
-                      }`}
-                    >
-                      {formatPKR(owner.outstanding)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-4">
+          {owners.map((owner) => {
+            const isExpanded = expandedId === owner.id;
+            return (
+              <Card key={owner.id}>
+                <button
+                  type="button"
+                  className="w-full text-left"
+                  onClick={() => toggleExpand(owner.id)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>{owner.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {owner.email}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">
+                            Outstanding
+                          </p>
+                          <p
+                            className={`text-lg font-bold font-mono ${
+                              owner.outstanding > 0
+                                ? "text-amber-400"
+                                : "text-emerald-400"
+                            }`}
+                          >
+                            {formatPKR(owner.outstanding)}
+                          </p>
+                        </div>
+                        <ChevronDown
+                          className={`size-5 text-muted-foreground transition-transform duration-200 ${
+                            isExpanded ? "rotate-180" : ""
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </CardHeader>
+                </button>
+
+                {isExpanded && (
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Summary row */}
+                    <div className="flex gap-6 rounded-lg bg-muted/30 px-4 py-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Invested
+                        </p>
+                        <p className="font-mono font-semibold text-emerald-400">
+                          {formatPKR(owner.totalInvested)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Repaid</p>
+                        <p className="font-mono font-semibold text-red-400">
+                          {formatPKR(owner.totalRepaid)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Outstanding
+                        </p>
+                        <p
+                          className={`font-mono font-semibold ${
+                            owner.outstanding > 0
+                              ? "text-amber-400"
+                              : "text-emerald-400"
+                          }`}
+                        >
+                          {formatPKR(owner.outstanding)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Transaction history */}
+                    {owner.transactions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground py-2">
+                        No transactions recorded.
+                      </p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">
+                              Amount
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {owner.transactions.map((txn) => (
+                            <TableRow key={txn.id}>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(txn.created_at).toLocaleDateString(
+                                  "en-PK",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    txn.type === "owner_investment"
+                                      ? "secondary"
+                                      : "outline"
+                                  }
+                                >
+                                  {txn.type === "owner_investment"
+                                    ? "Investment"
+                                    : "Repayment"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="max-w-[300px] truncate">
+                                {txn.description ?? "-"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span
+                                  className={`font-mono font-medium ${
+                                    txn.type === "owner_investment"
+                                      ? "text-emerald-400"
+                                      : "text-red-400"
+                                  }`}
+                                >
+                                  {txn.type === "owner_investment" ? "+" : "-"}
+                                  {formatPKR(txn.amount_pkr)}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
