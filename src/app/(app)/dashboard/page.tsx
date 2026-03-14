@@ -25,6 +25,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
+import { OwnerLiabilities } from "./owner-liabilities";
 
 const typeLabels: Record<TransactionType, string> = {
   client_payment: "Client Payment",
@@ -110,6 +111,10 @@ export default async function DashboardPage() {
     }
   }
 
+  const ownerTxns = allTxns.filter(
+    (t) => t.type === "owner_investment" || t.type === "owner_repayment"
+  );
+
   const ownerLiabilities = Array.from(ownerMap.entries()).map(
     ([id, data]) => ({
       id,
@@ -117,6 +122,15 @@ export default async function DashboardPage() {
       invested: data.invested,
       repaid: data.repaid,
       owed: data.invested - data.repaid,
+      transactions: ownerTxns
+        .filter((t) => t.owner_id === id)
+        .map((t) => ({
+          id: t.id,
+          type: t.type,
+          amount_pkr: t.amount_pkr,
+          description: t.description,
+          created_at: t.created_at,
+        })),
     })
   );
 
@@ -205,39 +219,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Owner Liabilities */}
-      {ownerLiabilities.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Scale className="size-4 text-muted-foreground" />
-              Owner Liabilities
-              <Tip text="How much the company owes each partner. Invested minus repaid." />
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {ownerLiabilities.map((owner) => (
-              <div
-                key={owner.id}
-                className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5"
-              >
-                <span className="text-sm font-medium">
-                  {owner.name}
-                  <Tip text={`Invested: ${formatPKR(owner.invested)} | Repaid: ${formatPKR(owner.repaid)}`} />
-                </span>
-                <span className={`font-mono text-sm font-semibold ${owner.owed > 0 ? "text-amber-400" : "text-emerald-400"}`}>
-                  {formatPKR(owner.owed)}
-                </span>
-              </div>
-            ))}
-            <div className="border-t border-border/50 pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">Total Owed</span>
-                <span className="font-mono font-bold">{formatPKR(totalOwed)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <OwnerLiabilities owners={ownerLiabilities} totalOwed={totalOwed} />
 
       {/* Recent Transactions */}
       <Card>
