@@ -14,15 +14,51 @@ Kontemplay Finance is a payment distribution & invoice management app for Kontem
 - **PDF**: React-PDF (client-side generation)
 - **Deploy**: Vercel (free tier)
 
-## Environment Variables
-Sensitive keys are stored in `~/.zshrc`:
-- `SUPABASE_ACCESS_TOKEN` - Management API token
-- `SUPABASE_PROJECT_REF` - Project reference ID (zbqcecdxgazrvxyauivu)
-- `SUPABASE_DB_PASSWORD` - Direct DB password
+## Environment Variables & Secrets
 
-App env vars in `web/.env.local`:
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+### Where secrets are stored
+All sensitive keys live in **`~/.zshrc`** as shell exports. They are available in every terminal session automatically.
+
+```bash
+# In ~/.zshrc:
+export SUPABASE_ACCESS_TOKEN=sbp_...     # Management API token (for DB queries, migrations, admin ops)
+export SUPABASE_PROJECT_REF=zbqce...     # Supabase project reference ID
+export SUPABASE_DB_PASSWORD='...'        # Direct Postgres password
+```
+
+### How to read them in scripts
+**In Node.js (.mjs scripts):**
+```javascript
+const token = process.env.SUPABASE_ACCESS_TOKEN;
+const ref = process.env.SUPABASE_PROJECT_REF;
+const dbPass = process.env.SUPABASE_DB_PASSWORD;
+```
+
+**In shell/bash:**
+```bash
+echo $SUPABASE_ACCESS_TOKEN
+echo $SUPABASE_PROJECT_REF
+echo $SUPABASE_DB_PASSWORD
+```
+
+**IMPORTANT:** Never hardcode these values in scripts or source files. Always use `process.env.*` or `$VAR`. If a new terminal doesn't have them, run `source ~/.zshrc` first.
+
+### App env vars
+Stored in `.env.local` (gitignored):
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public anon key (safe for frontend)
+
+### Getting the service_role key at runtime
+The service_role key (for admin auth operations like creating users) is NOT stored locally. Fetch it dynamically via the Management API:
+```javascript
+const res = await fetch(
+  `https://api.supabase.com/v1/projects/${process.env.SUPABASE_PROJECT_REF}/api-keys`,
+  { headers: { Authorization: `Bearer ${process.env.SUPABASE_ACCESS_TOKEN}` } }
+);
+const keys = await res.json();
+const serviceKey = keys.find(k => k.name === "service_role")?.api_key;
+const anonKey = keys.find(k => k.name === "anon")?.api_key;
+```
 
 ## Supabase Management API
 For DB operations (schema changes, data imports, queries), use the Management API:
@@ -81,7 +117,6 @@ Located in `web/src/lib/distribution.ts`:
 
 ## File Structure
 ```
-web/
 ├── src/
 │   ├── app/
 │   │   ├── (app)/          # Authenticated routes
