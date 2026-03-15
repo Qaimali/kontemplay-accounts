@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { Info } from "lucide-react";
 
 export function Tip({ text }: { text: string }) {
   const [show, setShow] = useState(false);
@@ -27,16 +28,16 @@ export function Tip({ text }: { text: string }) {
   return (
     <span
       ref={ref}
-      className="cursor-help ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-muted text-muted-foreground text-[10px] font-bold border border-border/50"
+      className="cursor-help ml-1.5 inline-flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-200"
       onMouseEnter={handleEnter}
       onMouseLeave={() => setShow(false)}
     >
-      ?
+      <Info className="size-3.5" />
       {show &&
         mounted &&
         createPortal(
           <div
-            className="fixed z-[9999] w-80 p-3 rounded-lg bg-popover text-popover-foreground text-xs font-sans leading-relaxed shadow-xl ring-1 ring-border/50 whitespace-pre-line backdrop-blur-md"
+            className="fixed z-[9999] w-80 p-3.5 rounded-xl bg-popover/95 text-popover-foreground text-xs font-sans leading-relaxed shadow-[0_4px_24px_oklch(0_0_0/40%)] ring-1 ring-border/30 whitespace-pre-line backdrop-blur-xl"
             style={{
               top: pos.top,
               left: pos.left,

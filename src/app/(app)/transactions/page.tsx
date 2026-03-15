@@ -43,6 +43,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Pencil, Trash2, Receipt, FileDown, X } from "lucide-react";
 
 const typeLabels: Record<TransactionType, string> = {
   client_payment: "Client Payment",
@@ -344,13 +345,13 @@ export default function TransactionsPage() {
   const hasFilters = filterType || filterYear || filterMonth || filterDateFrom || filterDateTo || searchQuery;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold tracking-tight">Transactions</h1>
 
       {/* Filters */}
-      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+      <div className="grid grid-cols-2 gap-5 sm:flex sm:flex-wrap sm:items-end">
         <div className="col-span-2 space-y-1.5 sm:col-span-1">
-          <Label>Search</Label>
+          <Label className="text-[13px]">Search</Label>
           <Input
             type="text"
             placeholder="Search description..."
@@ -361,7 +362,7 @@ export default function TransactionsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Type</Label>
+          <Label className="text-[13px]">Type</Label>
           <Select value={filterType} onValueChange={(v) => setFilterType(v ?? "")}>
             <SelectTrigger className="sm:w-[170px]">
               <SelectValue placeholder="All types" />
@@ -378,7 +379,7 @@ export default function TransactionsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Year</Label>
+          <Label className="text-[13px]">Year</Label>
           <Select value={filterYear} onValueChange={(v) => setFilterYear(v ?? "")}>
             <SelectTrigger className="sm:w-[110px]">
               <SelectValue placeholder="All" />
@@ -393,7 +394,7 @@ export default function TransactionsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Month</Label>
+          <Label className="text-[13px]">Month</Label>
           <Select value={filterMonth} onValueChange={(v) => setFilterMonth(v ?? "")}>
             <SelectTrigger className="sm:w-[140px]">
               <SelectValue placeholder="All" />
@@ -408,7 +409,7 @@ export default function TransactionsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>From</Label>
+          <Label className="text-[13px]">From</Label>
           <Input
             type="date"
             value={filterDateFrom}
@@ -418,7 +419,7 @@ export default function TransactionsPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>To</Label>
+          <Label className="text-[13px]">To</Label>
           <Input
             type="date"
             value={filterDateTo}
@@ -428,7 +429,8 @@ export default function TransactionsPage() {
         </div>
 
         {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="mb-0.5">
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="mb-0.5 transition-all duration-200">
+            <X className="mr-1 size-3.5" />
             Clear filters
           </Button>
         )}
@@ -437,7 +439,7 @@ export default function TransactionsPage() {
           <Button
             variant="outline"
             size="sm"
-            className="mb-0.5"
+            className="mb-0.5 transition-all duration-200"
             onClick={() => {
               const rows = transactions.map((txn) => ({
                 Date: new Date(txn.created_at).toLocaleDateString("en-PK"),
@@ -450,6 +452,7 @@ export default function TransactionsPage() {
               exportToCSV(rows, "transactions");
             }}
           >
+            <FileDown className="mr-1.5 size-3.5" />
             Export CSV
           </Button>
         )}
@@ -457,17 +460,19 @@ export default function TransactionsPage() {
 
       {/* Bulk Actions */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3">
           <span className="text-sm font-medium">{selected.size} selected</span>
           <Button
             variant="destructive"
             size="sm"
             onClick={handleDeleteSelected}
             disabled={deleting}
+            className="transition-all duration-200"
           >
+            <Trash2 className="mr-1.5 size-3.5" />
             {deleting ? "Deleting..." : `Delete ${selected.size}`}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setSelected(new Set())}>
+          <Button variant="outline" size="sm" onClick={() => setSelected(new Set())} className="transition-all duration-200">
             Clear
           </Button>
         </div>
@@ -506,9 +511,9 @@ export default function TransactionsPage() {
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="space-y-1.5">
-                    <Label>Type</Label>
+                    <Label className="text-[13px]">Type</Label>
                     <Select
                       value={formType}
                       onValueChange={(v) => { if (v) setFormType(v as TransactionType); }}
@@ -527,7 +532,7 @@ export default function TransactionsPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Amount (PKR)</Label>
+                    <Label className="text-[13px]">Amount (PKR)</Label>
                     <Input
                       type="number"
                       min={0}
@@ -538,7 +543,7 @@ export default function TransactionsPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Description</Label>
+                    <Label className="text-[13px]">Description</Label>
                     <Input
                       type="text"
                       placeholder="Optional description"
@@ -548,7 +553,7 @@ export default function TransactionsPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Transaction Date</Label>
+                    <Label className="text-[13px]">Transaction Date</Label>
                     <Input
                       type="date"
                       value={formDate}
@@ -557,7 +562,7 @@ export default function TransactionsPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>Reference Month</Label>
+                    <Label className="text-[13px]">Reference Month</Label>
                     <Input
                       type="text"
                       placeholder="YYYY-MM"
@@ -568,7 +573,7 @@ export default function TransactionsPage() {
 
                   {showOwnerField && (
                     <div className="space-y-1.5">
-                      <Label>Owner</Label>
+                      <Label className="text-[13px]">Owner</Label>
                       <Select
                         value={formOwnerId}
                         onValueChange={(v) => setFormOwnerId(v ?? "")}
@@ -619,9 +624,15 @@ export default function TransactionsPage() {
               Loading transactions...
             </p>
           ) : transactions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No transactions found.
-            </p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/40">
+                <Receipt className="size-7 text-muted-foreground/60" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">No transactions found</p>
+              <p className="mt-1 text-[13px] text-muted-foreground/60">
+                {hasFilters ? "Try adjusting your filters" : "Add your first transaction to get started"}
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -673,7 +684,7 @@ export default function TransactionsPage() {
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         {txn.is_credit ? (
-                          <span className="font-mono text-emerald-400">
+                          <span className="font-mono tabular-nums text-emerald-400">
                             {formatPKR(txn.amount_pkr)}
                           </span>
                         ) : (
@@ -682,7 +693,7 @@ export default function TransactionsPage() {
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         {!txn.is_credit ? (
-                          <span className="font-mono text-red-400">
+                          <span className="font-mono tabular-nums text-red-400">
                             {formatPKR(txn.amount_pkr)}
                           </span>
                         ) : (
@@ -694,20 +705,20 @@ export default function TransactionsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-muted-foreground hover:text-foreground h-7 w-7 p-0"
+                            className="text-muted-foreground hover:text-foreground h-7 w-7 p-0 transition-all duration-200"
                             onClick={() => openEditDialog(txn)}
                             title="Edit"
                           >
-                            ✎
+                            <Pencil className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-muted-foreground hover:text-red-400 h-7 w-7 p-0"
+                            className="text-muted-foreground hover:text-red-400 h-7 w-7 p-0 transition-all duration-200"
                             onClick={() => handleDeleteSingle(txn.id)}
                             title="Delete"
                           >
-                            ×
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -726,12 +737,12 @@ export default function TransactionsPage() {
                       Totals
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <span className="font-mono font-semibold text-emerald-400">
+                      <span className="font-mono tabular-nums font-semibold text-emerald-400">
                         {formatPKR(totalCredits)}
                       </span>
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      <span className="font-mono font-semibold text-red-400">
+                      <span className="font-mono tabular-nums font-semibold text-red-400">
                         {formatPKR(totalDebits)}
                       </span>
                     </TableCell>
@@ -748,7 +759,7 @@ export default function TransactionsPage() {
                       Net
                     </TableCell>
                     <TableCell colSpan={2} className="text-right whitespace-nowrap">
-                      <span className={`font-mono font-bold text-base ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      <span className={`font-mono tabular-nums font-bold text-base ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                         {net >= 0 ? "+" : ""}{formatPKR(net)}
                       </span>
                     </TableCell>
@@ -771,9 +782,9 @@ export default function TransactionsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="space-y-1.5">
-              <Label>Type</Label>
+              <Label className="text-[13px]">Type</Label>
               <Select
                 value={editType}
                 onValueChange={(v) => { if (v) setEditType(v as TransactionType); }}
@@ -792,7 +803,7 @@ export default function TransactionsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Amount (PKR)</Label>
+              <Label className="text-[13px]">Amount (PKR)</Label>
               <Input
                 type="number"
                 min={0}
@@ -803,7 +814,7 @@ export default function TransactionsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Description</Label>
+              <Label className="text-[13px]">Description</Label>
               <Input
                 type="text"
                 placeholder="Optional description"
@@ -813,7 +824,7 @@ export default function TransactionsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Transaction Date</Label>
+              <Label className="text-[13px]">Transaction Date</Label>
               <Input
                 type="date"
                 value={editDate}
@@ -822,7 +833,7 @@ export default function TransactionsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Reference Month</Label>
+              <Label className="text-[13px]">Reference Month</Label>
               <Input
                 type="text"
                 placeholder="YYYY-MM"
@@ -833,7 +844,7 @@ export default function TransactionsPage() {
 
             {(editType === "owner_investment" || editType === "owner_repayment") && (
               <div className="space-y-1.5">
-                <Label>Owner</Label>
+                <Label className="text-[13px]">Owner</Label>
                 <Select
                   value={editOwnerId}
                   onValueChange={(v) => setEditOwnerId(v ?? "")}

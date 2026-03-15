@@ -59,20 +59,20 @@ export function OwnerLiabilities({
             <div key={owner.id}>
               <button
                 type="button"
-                className="flex w-full items-center justify-between rounded-lg bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"
+                className="flex w-full items-center justify-between rounded-xl bg-muted/20 px-4 py-3 transition-all duration-200 hover:bg-muted/40 cursor-pointer"
                 onClick={() =>
                   setExpandedId((prev) => (prev === owner.id ? null : owner.id))
                 }
               >
-                <span className="text-sm font-medium">
+                <span className="flex items-center gap-2 text-sm font-medium">
                   {owner.name}
                   <Tip
                     text={`Invested: ${formatPKR(owner.invested)} | Repaid: ${formatPKR(owner.repaid)}`}
                   />
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span
-                    className={`font-mono text-sm font-semibold ${
+                    className={`font-mono text-sm font-semibold tabular-nums ${
                       owner.owed > 0 ? "text-amber-400" : "text-emerald-400"
                     }`}
                   >
@@ -87,27 +87,27 @@ export function OwnerLiabilities({
               </button>
 
               {isExpanded && (
-                <div className="mt-1 rounded-lg border border-border/30 bg-background/50 p-3">
+                <div className="mt-1.5 rounded-xl border border-border/20 bg-background/50 p-4">
                   {/* Summary */}
-                  <div className="flex flex-wrap gap-4 mb-3 sm:gap-6">
+                  <div className="flex flex-wrap gap-6 mb-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Invested</p>
-                      <p className="font-mono text-sm font-semibold text-emerald-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Invested</p>
+                      <p className="font-mono text-sm font-semibold text-emerald-400 tabular-nums">
                         {formatPKR(owner.invested)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Repaid</p>
-                      <p className="font-mono text-sm font-semibold text-red-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Repaid</p>
+                      <p className="font-mono text-sm font-semibold text-red-400 tabular-nums">
                         {formatPKR(owner.repaid)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
                         Outstanding
                       </p>
                       <p
-                        className={`font-mono text-sm font-semibold ${
+                        className={`font-mono text-sm font-semibold tabular-nums ${
                           owner.owed > 0
                             ? "text-amber-400"
                             : "text-emerald-400"
@@ -160,12 +160,12 @@ export function OwnerLiabilities({
                                   : "Repayment"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="max-w-[250px] truncate hidden sm:table-cell">
+                            <TableCell className="max-w-[250px] truncate hidden sm:table-cell text-muted-foreground">
                               {txn.description ?? "-"}
                             </TableCell>
                             <TableCell className="text-right whitespace-nowrap">
                               <span
-                                className={`font-mono font-medium ${
+                                className={`font-mono font-medium tabular-nums ${
                                   txn.type === "owner_investment"
                                     ? "text-emerald-400"
                                     : "text-red-400"
@@ -186,10 +186,10 @@ export function OwnerLiabilities({
             </div>
           );
         })}
-        <div className="border-t border-border/50 pt-3">
+        <div className="border-t border-border/30 pt-3 mt-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold">Total Owed</span>
-            <span className="font-mono font-bold">{formatPKR(totalOwed)}</span>
+            <span className="font-mono font-bold tabular-nums">{formatPKR(totalOwed)}</span>
           </div>
         </div>
       </CardContent>

@@ -189,9 +189,9 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
             <CardTitle>Invoice Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="space-y-1">
-                <Label className="text-xs">Invoice #</Label>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Invoice #</Label>
                 <Input
                   type="number"
                   min={1}
@@ -199,24 +199,24 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Invoice Month</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Invoice Month</Label>
                 <Input
                   type="month"
                   value={invoiceMonth}
                   onChange={(e) => handleMonthChange(e.target.value)}
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Invoice Date</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Invoice Date</Label>
                 <Input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Bill To</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Bill To</Label>
                 <Input
                   type="text"
                   value={billTo}
@@ -225,8 +225,8 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Status</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Status</Label>
                 <Select value={status} onValueChange={(v) => { if (v) setStatus(v); }}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder={STATUS_OPTIONS.find((s) => s.value === status)?.label ?? "Draft"} />
@@ -238,16 +238,16 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Due Date</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Due Date</Label>
                 <Input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Tax %</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Tax %</Label>
                 <Input
                   type="number"
                   min={0}
@@ -271,7 +271,7 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
                 {lineItems.map((item, i) => (
                   <div
                     key={i}
-                    className="flex flex-col gap-1.5 rounded-lg border p-2.5"
+                    className="flex flex-col gap-1.5 rounded-xl border border-border/30 bg-muted/10 p-3 transition-all duration-200 hover:border-border/50"
                   >
                     <Input
                       type="text"
@@ -332,10 +332,10 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs">Notes (bank details)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[13px]">Notes (bank details)</Label>
               <textarea
-                className="flex min-h-[80px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-input/30"
+                className="flex min-h-[80px] w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/20 focus-visible:border-ring dark:bg-input/20 dark:hover:bg-input/30 transition-all duration-200"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />

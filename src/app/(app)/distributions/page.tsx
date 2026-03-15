@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Download, FileDown, Merge } from "lucide-react";
+import { ChevronDown, Download, FileDown, Merge, Building2, History, Inbox } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePDF, type InvoicePDFData } from "@/lib/invoice-pdf";
 
@@ -187,15 +187,24 @@ export default function DistributionsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Distribution History</h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold tracking-tight">Distribution History</h1>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <div className="flex items-center gap-3 py-12 justify-center">
+          <div className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-[13px] text-muted-foreground">Loading distributions...</p>
+        </div>
       ) : distributions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No distributions yet. Create one from the Distribute page.
-        </p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
+            <Inbox className="size-7 text-muted-foreground/50" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No distributions yet</p>
+          <p className="text-[13px] text-muted-foreground/60 mt-1">
+            Create one from the Distribute page to get started.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {distributions.map((dist) => {
@@ -208,7 +217,7 @@ export default function DistributionsPage() {
                 {/* Summary row */}
                 <button
                   onClick={() => toggleExpand(dist.id)}
-                  className="flex w-full flex-col gap-2 px-4 py-3 text-left hover:bg-muted/30 transition-colors sm:flex-row sm:items-center sm:justify-between"
+                  className="flex w-full flex-col gap-2 rounded-xl bg-muted/20 px-4 py-3 text-left transition-all duration-200 hover:bg-muted/40 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <ChevronDown
@@ -220,7 +229,7 @@ export default function DistributionsPage() {
                       <p className="font-medium">
                         {formatMonth(dist.reference_month)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] text-muted-foreground/60 mt-0.5">
                         {new Date(dist.created_at).toLocaleDateString("en-PK", {
                           day: "2-digit",
                           month: "short",
@@ -234,16 +243,16 @@ export default function DistributionsPage() {
                   </div>
                   <div className="flex items-center gap-4 pl-7 text-right text-sm sm:gap-6 sm:pl-0">
                     <div>
-                      <p className="text-xs text-muted-foreground">Total USD</p>
-                      <p className="font-mono font-medium">{formatUSD(dist.total_usd)}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Total USD</p>
+                      <p className="font-mono tabular-nums font-medium">{formatUSD(dist.total_usd)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Employee Net</p>
-                      <p className="font-mono font-medium">{formatPKR(totalNet)}</p>
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Employee Net</p>
+                      <p className="font-mono tabular-nums font-medium">{formatPKR(totalNet)}</p>
                     </div>
                     <div className="hidden sm:block">
-                      <p className="text-xs text-muted-foreground">Company Share</p>
-                      <p className="font-mono font-medium text-emerald-400">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Company Share</p>
+                      <p className="font-mono tabular-nums font-medium text-emerald-400">
                         {formatPKR(dist.company_net_pkr ?? 0)}
                       </p>
                     </div>
@@ -254,28 +263,28 @@ export default function DistributionsPage() {
                 {isExpanded && (
                   <CardContent className="pt-0 border-t border-border/30">
                     {/* Distribution info */}
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 text-sm mt-4 mb-6">
+                    <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 mt-5 mb-6">
                       <div>
-                        <p className="text-xs text-muted-foreground">Received PKR</p>
-                        <p className="font-mono font-medium">{formatPKR(dist.amount_received_pkr)}</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">Received PKR</p>
+                        <p className="font-mono tabular-nums font-medium text-sm">{formatPKR(dist.amount_received_pkr)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Base Rate</p>
-                        <p className="font-mono font-medium">{formatNumber(dist.base_rate)}</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">Base Rate</p>
+                        <p className="font-mono tabular-nums font-medium text-sm">{formatNumber(dist.base_rate)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Effective Rate</p>
-                        <p className="font-mono font-medium">{formatNumber(dist.effective_rate)}</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">Effective Rate</p>
+                        <p className="font-mono tabular-nums font-medium text-sm">{formatNumber(dist.effective_rate)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Threshold</p>
-                        <p className="font-mono font-medium">{formatNumber(dist.threshold)} PKR</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-1">Threshold</p>
+                        <p className="font-mono tabular-nums font-medium text-sm">{formatNumber(dist.threshold)} PKR</p>
                       </div>
                     </div>
 
                     {/* Invoices */}
-                    <div className="flex flex-col gap-2 mb-2 sm:flex-row sm:items-center sm:justify-between">
-                      <h3 className="text-sm font-semibold">Invoices</h3>
+                    <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Invoices</p>
                       <div className="flex flex-wrap gap-2">
                         <Button
                           variant="outline"
@@ -318,30 +327,29 @@ export default function DistributionsPage() {
                       </TableHeader>
                       <TableBody>
                         {dist.invoices.map((inv) => (
-                          <TableRow key={inv.id}>
+                          <TableRow key={inv.id} className="transition-all duration-200">
                             <TableCell className="font-medium">
                               {inv.employee?.name ?? "Unknown"}
                             </TableCell>
-                            <TableCell className="text-right font-mono hidden sm:table-cell">
+                            <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
                               {formatUSD(inv.salary_usd)}
                             </TableCell>
-                            <TableCell className="text-right font-mono hidden md:table-cell">
+                            <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
                               {formatNumber(inv.rate_applied)}
                             </TableCell>
-                            <TableCell className="text-right font-mono hidden md:table-cell">
+                            <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
                               {formatPKR(inv.gross_pkr)}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-red-400 hidden sm:table-cell">
+                            <TableCell className="text-right font-mono tabular-nums text-red-400 hidden sm:table-cell">
                               {formatPKR(inv.total_tax_pkr)}
                             </TableCell>
-                            <TableCell className="text-right font-mono font-semibold text-emerald-400 whitespace-nowrap">
+                            <TableCell className="text-right font-mono tabular-nums font-semibold text-emerald-400 whitespace-nowrap">
                               {formatPKR(inv.net_pkr)}
                             </TableCell>
                             <TableCell>
                               <Button
                                 variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0"
+                                size="icon-xs"
                                 onClick={() => handleDownloadPDF(dist, inv)}
                                 title="Download PDF"
                               >
@@ -355,16 +363,19 @@ export default function DistributionsPage() {
                     </div>
 
                     {/* Company share */}
-                    <div className="rounded-md bg-muted/30 p-4 mt-4">
-                      <h3 className="text-sm font-semibold mb-2">Company Share</h3>
-                      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 text-sm">
+                    <div className="rounded-xl bg-muted/20 px-4 py-3 mt-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Building2 className="size-3.5 text-muted-foreground/50" />
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Company Share</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
                         <div>
-                          <p className="text-xs text-muted-foreground">Gross</p>
-                          <p className="font-mono font-medium">{formatPKR(dist.company_gross_pkr ?? 0)}</p>
+                          <p className="text-[13px] text-muted-foreground mb-0.5">Gross</p>
+                          <p className="font-mono tabular-nums font-medium text-sm">{formatPKR(dist.company_gross_pkr ?? 0)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Net</p>
-                          <p className="font-mono font-medium text-emerald-400">
+                          <p className="text-[13px] text-muted-foreground mb-0.5">Net</p>
+                          <p className="font-mono tabular-nums font-medium text-sm text-emerald-400">
                             {formatPKR(dist.company_net_pkr ?? 0)}
                           </p>
                         </div>
@@ -373,8 +384,11 @@ export default function DistributionsPage() {
 
                     {/* Linked transactions */}
                     {transactions.length > 0 && (
-                      <div className="mt-4">
-                        <h3 className="text-sm font-semibold mb-2">Linked Transactions</h3>
+                      <div className="mt-5">
+                        <div className="flex items-center gap-2 mb-3">
+                          <History className="size-3.5 text-muted-foreground/50" />
+                          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Linked Transactions</p>
+                        </div>
                         <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
@@ -386,16 +400,16 @@ export default function DistributionsPage() {
                           </TableHeader>
                           <TableBody>
                             {transactions.map((txn) => (
-                              <TableRow key={txn.id}>
+                              <TableRow key={txn.id} className="transition-all duration-200">
                                 <TableCell>
                                   <Badge variant={txn.is_credit ? "default" : "destructive"}>
                                     {txn.type.replace(/_/g, " ")}
                                   </Badge>
                                 </TableCell>
-                                <TableCell>{txn.description ?? "-"}</TableCell>
+                                <TableCell className="text-[13px]">{txn.description ?? "-"}</TableCell>
                                 <TableCell className="text-right">
                                   <span
-                                    className={`font-mono ${
+                                    className={`font-mono tabular-nums font-medium ${
                                       txn.is_credit ? "text-emerald-400" : "text-red-400"
                                     }`}
                                   >

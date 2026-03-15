@@ -68,7 +68,6 @@ export default async function DashboardPage() {
     ownerNames[o.id] = o.name;
   }
 
-  // --- Meaningful metrics ---
   const sum = (type: TransactionType) =>
     allTxns.filter((t) => t.type === type).reduce((s, t) => s + t.amount_pkr, 0);
 
@@ -79,12 +78,9 @@ export default async function DashboardPage() {
   const ownerInvestments = sum("owner_investment");
   const expenses = sum("expense");
 
-  // Cash position: client money in - operating costs - repayments to owners
-  // Owner investments & expenses cancel out (partners paid directly for company expenses)
   const operatingCost = salaryPayouts + contractorTax;
   const cashPosition = clientRevenue - operatingCost - ownerRepayments;
 
-  // Owner liabilities
   const ownerMap = new Map<
     string,
     { name: string; invested: number; repaid: number }
@@ -138,10 +134,57 @@ export default async function DashboardPage() {
 
   const recentTxns = allTxns.slice(0, 10);
 
+  const metrics = [
+    {
+      label: "Client Revenue",
+      value: formatPKR(clientRevenue),
+      tip: "Total payments received from clients. This is the actual income.",
+      icon: TrendingUp,
+      color: "emerald",
+      iconBg: "bg-emerald-500/10",
+      iconColor: "text-emerald-400",
+      valueColor: "text-emerald-400",
+      stripColor: "oklch(0.76 0.18 155)",
+    },
+    {
+      label: "Operating Cost",
+      value: formatPKR(operatingCost),
+      tip: `Salaries + contractor tax paid from client revenue.\n\n\u2022 Salaries: ${formatPKR(salaryPayouts)}\n\u2022 Contractor tax (FBR): ${formatPKR(contractorTax)}`,
+      icon: TrendingDown,
+      color: "red",
+      iconBg: "bg-red-500/10",
+      iconColor: "text-red-400",
+      valueColor: "text-red-400",
+      stripColor: "oklch(0.63 0.24 25)",
+    },
+    {
+      label: "Cash Position",
+      value: formatPKR(cashPosition),
+      tip: `What the company actually has (or owes).\n\nClient Revenue: ${formatPKR(clientRevenue)}\n- Operating Cost: ${formatPKR(operatingCost)}\n- Repaid to Owners: ${formatPKR(ownerRepayments)}\n= Cash: ${formatPKR(cashPosition)}\n\nNote: Owner investments & expenses cancel out (partners paid directly for things like domain, designer, etc.)`,
+      icon: Wallet,
+      color: "primary",
+      iconBg: "bg-primary/10",
+      iconColor: "text-primary",
+      valueColor: cashPosition >= 0 ? "text-emerald-400" : "text-red-400",
+      stripColor: "oklch(0.72 0.185 195)",
+    },
+    {
+      label: "Owes to Partners",
+      value: formatPKR(totalOwed),
+      tip: `Total outstanding loans from partners. Partners paid for company expenses out of pocket \u2014 this is what the company still needs to pay back.\n\nTotal invested: ${formatPKR(ownerInvestments)}\nTotal repaid: ${formatPKR(ownerRepayments)}\nStill owed: ${formatPKR(totalOwed)}`,
+      icon: Scale,
+      color: "amber",
+      iconBg: "bg-amber-500/10",
+      iconColor: "text-amber-400",
+      valueColor: "text-amber-400",
+      stripColor: "oklch(0.78 0.16 85)",
+    },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Financial overview and recent activity
         </p>
@@ -149,73 +192,33 @@ export default async function DashboardPage() {
 
       {/* Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Client Revenue
-                <Tip text="Total payments received from clients. This is the actual income." />
-              </span>
-              <div className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10">
-                <TrendingUp className="size-4 text-emerald-400" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-emerald-400">
-              {formatPKR(clientRevenue)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Operating Cost
-                <Tip text={`Salaries + contractor tax paid from client revenue.\n\n• Salaries: ${formatPKR(salaryPayouts)}\n• Contractor tax (FBR): ${formatPKR(contractorTax)}`} />
-              </span>
-              <div className="flex size-8 items-center justify-center rounded-lg bg-red-500/10">
-                <TrendingDown className="size-4 text-red-400" />
-              </div>
-            </div>
-            <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-red-400">
-              {formatPKR(operatingCost)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Cash Position
-                <Tip text={`What the company actually has (or owes).\n\nClient Revenue: ${formatPKR(clientRevenue)}\n- Operating Cost: ${formatPKR(operatingCost)}\n- Repaid to Owners: ${formatPKR(ownerRepayments)}\n= Cash: ${formatPKR(cashPosition)}\n\nNote: Owner investments & expenses cancel out (partners paid directly for things like domain, designer, etc.)`} />
-              </span>
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-                <Wallet className="size-4 text-primary" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${cashPosition >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-              {formatPKR(cashPosition)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-5">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                Owes to Partners
-                <Tip text={`Total outstanding loans from partners. Partners paid for company expenses out of pocket — this is what the company still needs to pay back.\n\nTotal invested: ${formatPKR(ownerInvestments)}\nTotal repaid: ${formatPKR(ownerRepayments)}\nStill owed: ${formatPKR(totalOwed)}`} />
-              </span>
-              <div className="flex size-8 items-center justify-center rounded-lg bg-amber-500/10">
-                <Scale className="size-4 text-amber-400" />
-              </div>
-            </div>
-            <p className={`mt-2 text-2xl font-bold font-mono tracking-tight text-amber-400`}>
-              {formatPKR(totalOwed)}
-            </p>
-          </CardContent>
-        </Card>
+        {metrics.map((m) => {
+          const Icon = m.icon;
+          return (
+            <Card
+              key={m.label}
+              className="accent-strip-top"
+              style={{ "--strip-color": m.stripColor } as React.CSSProperties}
+            >
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1 text-[13px] text-muted-foreground">
+                      {m.label}
+                      <Tip text={m.tip} />
+                    </span>
+                    <p className={`mt-2 text-2xl font-bold font-mono tracking-tight ${m.valueColor}`}>
+                      {m.value}
+                    </p>
+                  </div>
+                  <div className={`flex size-10 items-center justify-center rounded-xl ${m.iconBg}`}>
+                    <Icon className={`size-5 ${m.iconColor}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Owner Liabilities */}
@@ -231,11 +234,12 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           {recentTxns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="mb-3 flex size-12 items-center justify-center rounded-xl bg-muted/50">
-                <ArrowDownRight className="size-5 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/30">
+                <ArrowDownRight className="size-6 text-muted-foreground/60" />
               </div>
-              <p className="text-sm text-muted-foreground">No transactions yet.</p>
+              <p className="text-sm font-medium text-muted-foreground">No transactions yet</p>
+              <p className="mt-1 text-xs text-muted-foreground/60">Transactions will appear here once recorded</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -263,14 +267,14 @@ export default async function DashboardPage() {
                           {typeLabels[txn.type]}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-[300px] truncate hidden sm:table-cell">
+                      <TableCell className="max-w-[300px] truncate hidden sm:table-cell text-muted-foreground">
                         {txn.description ??
                           (txn.reference_month
                             ? formatMonth(txn.reference_month)
                             : "-")}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <span className={`font-mono font-medium ${txn.is_credit ? "text-emerald-400" : "text-red-400"}`}>
+                        <span className={`font-mono font-medium tabular-nums ${txn.is_credit ? "text-emerald-400" : "text-red-400"}`}>
                           {txn.is_credit ? "+" : "-"}
                           {formatPKR(txn.amount_pkr)}
                         </span>

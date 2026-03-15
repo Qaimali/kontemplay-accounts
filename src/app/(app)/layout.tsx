@@ -37,15 +37,20 @@ export default async function AppLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      <aside className="hidden md:flex w-[260px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-6">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary font-bold text-sidebar-primary-foreground text-sm">
-            K
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/25">
+            <span className="text-base font-bold text-primary">K</span>
           </div>
-          <span className="text-base font-semibold tracking-tight text-sidebar-accent-foreground">
-            Kontemplay
-          </span>
+          <div>
+            <span className="text-[15px] font-semibold tracking-tight text-sidebar-accent-foreground">
+              Kontemplay
+            </span>
+            <span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-sidebar-foreground/60">
+              Finance
+            </span>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -54,7 +59,7 @@ export default async function AppLayout({
         {/* User section */}
         <div className="border-t border-sidebar-border px-4 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-full bg-sidebar-primary/15 text-xs font-semibold text-sidebar-primary ring-1 ring-sidebar-primary/20">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-semibold text-primary ring-1 ring-primary/15">
               {initials}
             </div>
             <div className="min-w-0 flex-1">
@@ -73,7 +78,7 @@ export default async function AppLayout({
         <MobileSidebar displayName={displayName} initials={initials} />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>
+          <div className="mx-auto max-w-6xl p-4 md:px-8 md:py-8">{children}</div>
         </main>
       </div>
     </div>

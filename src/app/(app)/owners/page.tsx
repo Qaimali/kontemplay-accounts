@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Landmark, Receipt } from "lucide-react";
 
 type TransactionForm = {
   owner_id: string;
@@ -176,7 +176,7 @@ export default function OwnersPage() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Owners</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Owners</h1>
         <div className="flex gap-2">
           <Dialog open={investDialogOpen} onOpenChange={setInvestDialogOpen}>
             <DialogTrigger
@@ -197,10 +197,10 @@ export default function OwnersPage() {
                   e.preventDefault();
                   handleInvestmentSave();
                 }}
-                className="space-y-4"
+                className="space-y-5"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="invest-owner">Owner</Label>
+                  <Label htmlFor="invest-owner" className="text-[13px]">Owner</Label>
                   <Select
                     value={investForm.owner_id}
                     onValueChange={(val) =>
@@ -224,7 +224,7 @@ export default function OwnersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="invest-amount">Amount (PKR)</Label>
+                  <Label htmlFor="invest-amount" className="text-[13px]">Amount (PKR)</Label>
                   <Input
                     id="invest-amount"
                     type="number"
@@ -241,7 +241,7 @@ export default function OwnersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="invest-desc">Description</Label>
+                  <Label htmlFor="invest-desc" className="text-[13px]">Description</Label>
                   <Input
                     id="invest-desc"
                     value={investForm.description}
@@ -256,7 +256,7 @@ export default function OwnersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="invest-month">Reference Month</Label>
+                  <Label htmlFor="invest-month" className="text-[13px]">Reference Month</Label>
                   <Input
                     id="invest-month"
                     type="month"
@@ -310,10 +310,10 @@ export default function OwnersPage() {
                   e.preventDefault();
                   handleRepaymentSave();
                 }}
-                className="space-y-4"
+                className="space-y-5"
               >
                 <div className="space-y-2">
-                  <Label htmlFor="repay-owner">Owner</Label>
+                  <Label htmlFor="repay-owner" className="text-[13px]">Owner</Label>
                   <Select
                     value={repayForm.owner_id}
                     onValueChange={(val) =>
@@ -337,7 +337,7 @@ export default function OwnersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="repay-amount">Amount (PKR)</Label>
+                  <Label htmlFor="repay-amount" className="text-[13px]">Amount (PKR)</Label>
                   <Input
                     id="repay-amount"
                     type="number"
@@ -354,7 +354,7 @@ export default function OwnersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="repay-desc">Description</Label>
+                  <Label htmlFor="repay-desc" className="text-[13px]">Description</Label>
                   <Input
                     id="repay-desc"
                     value={repayForm.description}
@@ -369,7 +369,7 @@ export default function OwnersPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="repay-month">Reference Month</Label>
+                  <Label htmlFor="repay-month" className="text-[13px]">Reference Month</Label>
                   <Input
                     id="repay-month"
                     type="month"
@@ -409,7 +409,13 @@ export default function OwnersPage() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : owners.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No owners found.</p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
+            <Landmark className="size-7 text-muted-foreground/60" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No owners found</p>
+          <p className="text-[13px] text-muted-foreground/60 mt-1">Owners will appear here once added to the system.</p>
+        </div>
       ) : (
         <div className="space-y-4">
           {owners.map((owner) => {
@@ -418,66 +424,66 @@ export default function OwnersPage() {
               <Card key={owner.id}>
                 <button
                   type="button"
-                  className="w-full text-left"
+                  className="w-full rounded-xl bg-muted/20 px-4 py-3 text-left transition-all duration-200"
                   onClick={() => toggleExpand(owner.id)}
                 >
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle>{owner.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          {owner.email}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>{owner.name}</CardTitle>
+                      <p className="text-[13px] text-muted-foreground mt-0.5">
+                        {owner.email}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                          Outstanding
+                        </p>
+                        <p
+                          className={`text-lg font-bold font-mono tabular-nums ${
+                            owner.outstanding > 0
+                              ? "text-amber-400"
+                              : "text-emerald-400"
+                          }`}
+                        >
+                          {formatPKR(owner.outstanding)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">
-                            Outstanding
-                          </p>
-                          <p
-                            className={`text-lg font-bold font-mono ${
-                              owner.outstanding > 0
-                                ? "text-amber-400"
-                                : "text-emerald-400"
-                            }`}
-                          >
-                            {formatPKR(owner.outstanding)}
-                          </p>
-                        </div>
-                        <ChevronDown
-                          className={`size-5 text-muted-foreground transition-transform duration-200 ${
-                            isExpanded ? "rotate-180" : ""
-                          }`}
-                        />
-                      </div>
+                      <ChevronDown
+                        className={`size-5 text-muted-foreground transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                      />
                     </div>
-                  </CardHeader>
+                  </div>
                 </button>
 
                 {isExpanded && (
                   <CardContent className="pt-0 space-y-4">
                     {/* Summary row */}
-                    <div className="flex flex-wrap gap-4 rounded-lg bg-muted/30 px-4 py-3 sm:gap-6">
+                    <div className="flex flex-wrap gap-5 rounded-xl bg-muted/30 px-4 py-3 sm:gap-6 mt-1">
                       <div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
                           Invested
                         </p>
-                        <p className="font-mono font-semibold text-emerald-400">
+                        <p className="font-mono tabular-nums font-semibold text-emerald-400">
                           {formatPKR(owner.totalInvested)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Repaid</p>
-                        <p className="font-mono font-semibold text-red-400">
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                          Repaid
+                        </p>
+                        <p className="font-mono tabular-nums font-semibold text-red-400">
                           {formatPKR(owner.totalRepaid)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
                           Outstanding
                         </p>
                         <p
-                          className={`font-mono font-semibold ${
+                          className={`font-mono tabular-nums font-semibold ${
                             owner.outstanding > 0
                               ? "text-amber-400"
                               : "text-emerald-400"
@@ -489,10 +495,19 @@ export default function OwnersPage() {
                     </div>
 
                     {/* Transaction history */}
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                      Transaction History
+                    </p>
                     {owner.transactions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-2">
-                        No transactions recorded.
-                      </p>
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
+                          <Receipt className="size-7 text-muted-foreground/60" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground">No transactions recorded</p>
+                        <p className="text-[13px] text-muted-foreground/60 mt-1">
+                          Record an investment or repayment to see it here.
+                        </p>
+                      </div>
                     ) : (
                       <div className="overflow-x-auto">
                       <Table>
@@ -508,7 +523,7 @@ export default function OwnersPage() {
                         </TableHeader>
                         <TableBody>
                           {owner.transactions.map((txn) => (
-                            <TableRow key={txn.id}>
+                            <TableRow key={txn.id} className="transition-all duration-200">
                               <TableCell className="text-muted-foreground whitespace-nowrap">
                                 {new Date(txn.created_at).toLocaleDateString(
                                   "en-PK",
@@ -523,7 +538,7 @@ export default function OwnersPage() {
                                 <Badge
                                   variant={
                                     txn.type === "owner_investment"
-                                      ? "secondary"
+                                      ? "default"
                                       : "outline"
                                   }
                                 >
@@ -537,7 +552,7 @@ export default function OwnersPage() {
                               </TableCell>
                               <TableCell className="text-right whitespace-nowrap">
                                 <span
-                                  className={`font-mono font-medium ${
+                                  className={`font-mono tabular-nums font-medium ${
                                     txn.type === "owner_investment"
                                       ? "text-emerald-400"
                                       : "text-red-400"

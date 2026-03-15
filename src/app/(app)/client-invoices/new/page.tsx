@@ -92,7 +92,7 @@ export default function NewClientInvoicePage() {
   if (nextNumber === null || nextMonth === null) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-semibold tracking-tight">New Client Invoice</h1>
+        <h1 className="text-2xl font-bold tracking-tight">New Client Invoice</h1>
         <p className="text-sm text-muted-foreground">Loading...</p>
       </div>
     );
@@ -114,7 +114,7 @@ export default function NewClientInvoicePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">New Client Invoice</h1>
+      <h1 className="text-2xl font-bold tracking-tight">New Client Invoice</h1>
       <InvoiceForm
         editId={null}
         initialData={{

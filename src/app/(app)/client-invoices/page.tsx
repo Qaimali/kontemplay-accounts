@@ -35,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Download, Trash2, Pencil, CheckCircle } from "lucide-react";
+import { Plus, Download, Trash2, Pencil, CheckCircle, FileText } from "lucide-react";
 
 function fmtUSD(n: number) {
   return `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -152,8 +152,8 @@ export default function ClientInvoicesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Client Invoices</h1>
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold tracking-tight">Client Invoices</h1>
 
       <Card>
         <CardHeader>
@@ -176,14 +176,21 @@ export default function ClientInvoicesPage() {
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : invoices.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm">No invoices yet.</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-muted/40">
+                <FileText className="size-7 text-muted-foreground/60" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">No invoices yet</p>
+              <p className="mt-1 text-[13px] text-muted-foreground/60">
+                Create your first invoice to start tracking payments
+              </p>
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-3"
+                className="mt-4 transition-all duration-200"
                 render={<Link href="/client-invoices/new" />}
               >
+                <Plus className="mr-1.5 size-3.5" />
                 Create your first invoice
               </Button>
             </div>
@@ -211,7 +218,7 @@ export default function ClientInvoicesPage() {
 
                     return (
                       <TableRow key={inv.id}>
-                        <TableCell className="font-medium">{inv.invoice_number}</TableCell>
+                        <TableCell className="font-medium font-mono tabular-nums">{inv.invoice_number}</TableCell>
                         <TableCell className="whitespace-nowrap">
                           {inv.invoice_month ? formatMonth(inv.invoice_month) : "-"}
                         </TableCell>
@@ -219,7 +226,7 @@ export default function ClientInvoicesPage() {
                         <TableCell>
                           <Badge
                             variant={isOverdue ? "destructive" : st.variant}
-                            className={inv.status !== "received" ? "cursor-pointer hover:opacity-80" : ""}
+                            className={inv.status !== "received" ? "cursor-pointer transition-all duration-200 hover:opacity-80" : ""}
                             onClick={() => inv.status !== "received" && cycleStatus(inv)}
                             title={inv.status === "draft" || inv.status === "overdue" ? "Click to mark as Sent" : inv.status === "sent" ? "Click to mark as Received" : ""}
                           >
@@ -236,7 +243,7 @@ export default function ClientInvoicesPage() {
                             : "-"}
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
-                          <span className="font-mono font-semibold text-emerald-400">
+                          <span className="font-mono tabular-nums font-semibold text-emerald-400">
                             {fmtUSD(inv.total)}
                           </span>
                         </TableCell>
@@ -246,7 +253,7 @@ export default function ClientInvoicesPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 text-muted-foreground hover:text-emerald-400"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-emerald-400 transition-all duration-200"
                                 onClick={() => openReceiveDialog(inv)}
                                 title="Mark as Received"
                               >
@@ -256,7 +263,7 @@ export default function ClientInvoicesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all duration-200"
                               render={<Link href={`/client-invoices/${inv.id}`} />}
                               title="Edit"
                             >
@@ -265,7 +272,7 @@ export default function ClientInvoicesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground transition-all duration-200"
                               onClick={() => handleDownload(inv)}
                               title="Download PDF"
                             >
@@ -274,7 +281,7 @@ export default function ClientInvoicesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400"
+                              className="h-7 w-7 p-0 text-muted-foreground hover:text-red-400 transition-all duration-200"
                               onClick={() => handleDelete(inv.id)}
                               title="Delete"
                             >
@@ -304,9 +311,9 @@ export default function ClientInvoicesPage() {
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div className="space-y-1.5">
-              <Label>Amount Received (PKR)</Label>
+              <Label className="text-[13px]">Amount Received (PKR)</Label>
               <Input
                 type="number"
                 min={0}
@@ -315,7 +322,7 @@ export default function ClientInvoicesPage() {
                 onChange={(e) => setReceiveAmountPkr(e.target.value)}
                 autoFocus
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground/60">
                 This will create a Client Payment credit transaction in the ledger.
               </p>
             </div>

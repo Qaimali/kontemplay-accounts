@@ -28,7 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, Printer, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, Printer, Trash2, Users, FileText, Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { deleteInvoiceAction } from "./actions";
 
@@ -254,7 +255,7 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Employees</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Employees</h1>
         <Button onClick={openAdd} className="shrink-0">Add Employee</Button>
       </div>
 
@@ -270,10 +271,10 @@ export default function EmployeesPage() {
               e.preventDefault();
               handleSave();
             }}
-            className="space-y-4"
+            className="space-y-5"
           >
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name" className="text-[13px]">Name</Label>
               <Input
                 id="name"
                 value={form.name}
@@ -283,7 +284,7 @@ export default function EmployeesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cnic">CNIC</Label>
+              <Label htmlFor="cnic" className="text-[13px]">CNIC</Label>
               <Input
                 id="cnic"
                 value={form.cnic}
@@ -292,9 +293,9 @@ export default function EmployeesPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label htmlFor="salary">Default USD Salary</Label>
+                <Label htmlFor="salary" className="text-[13px]">Default USD Salary</Label>
                 <Input
                   id="salary"
                   type="number"
@@ -308,7 +309,7 @@ export default function EmployeesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="threshold">Threshold (PKR)</Label>
+                <Label htmlFor="threshold" className="text-[13px]">Threshold (PKR)</Label>
                 <Input
                   id="threshold"
                   type="number"
@@ -322,9 +323,9 @@ export default function EmployeesPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label htmlFor="contractor_tax">Contractor Tax %</Label>
+                <Label htmlFor="contractor_tax" className="text-[13px]">Contractor Tax %</Label>
                 <Input
                   id="contractor_tax"
                   type="number"
@@ -338,7 +339,7 @@ export default function EmployeesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="remittance_tax">Remittance Tax %</Label>
+                <Label htmlFor="remittance_tax" className="text-[13px]">Remittance Tax %</Label>
                 <Input
                   id="remittance_tax"
                   type="number"
@@ -358,7 +359,7 @@ export default function EmployeesPage() {
                 checked={form.is_active}
                 onCheckedChange={(val) => updateField("is_active", !!val)}
               />
-              <Label htmlFor="is_active">Active</Label>
+              <Label htmlFor="is_active" className="text-[13px]">Active</Label>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
@@ -380,9 +381,13 @@ export default function EmployeesPage() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : employees.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No employees yet. Add one to get started.
-        </p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
+            <Users className="size-7 text-muted-foreground/60" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">No employees yet</p>
+          <p className="text-[13px] text-muted-foreground/60 mt-1">Add your first employee to get started.</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {employees.map((emp) => {
@@ -390,37 +395,37 @@ export default function EmployeesPage() {
             return (
               <Card key={emp.id}>
                 {/* Employee header row */}
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <button
-                    type="button"
-                    className="flex flex-1 items-center gap-3 text-left"
-                    onClick={() => toggleExpand(emp.id)}
-                  >
-                    <ChevronDown
-                      className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{emp.name}</span>
-                        {!emp.is_active && (
-                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {formatUSD(emp.default_salary_usd)}/mo
-                        {emp.cnic ? ` · ${emp.cnic}` : ""}
-                      </div>
+                <button
+                  type="button"
+                  className={`flex w-full items-center gap-3 text-left transition-all duration-200 ${
+                    isExpanded
+                      ? "rounded-t-xl bg-muted/20 px-4 py-3"
+                      : "rounded-xl bg-muted/20 px-4 py-3"
+                  }`}
+                  onClick={() => toggleExpand(emp.id)}
+                >
+                  <ChevronDown
+                    className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{emp.name}</span>
+                      {!emp.is_active && (
+                        <Badge variant="secondary">Inactive</Badge>
+                      )}
                     </div>
-                    <div className="text-right text-xs text-muted-foreground hidden sm:block">
-                      <span>Tax: {emp.default_contractor_tax}% + {emp.default_remittance_tax}%</span>
-                      <span className="mx-2">·</span>
-                      <span>Threshold: {emp.default_threshold}</span>
+                    <div className="text-[13px] text-muted-foreground mt-0.5">
+                      <span className="font-mono tabular-nums">{formatUSD(emp.default_salary_usd)}</span>/mo
+                      {emp.cnic ? ` · ${emp.cnic}` : ""}
                     </div>
-                  </button>
+                  </div>
+                  <div className="text-right text-[13px] text-muted-foreground hidden sm:flex sm:items-center sm:gap-3">
+                    <span className="font-mono tabular-nums">Tax: {emp.default_contractor_tax}% + {emp.default_remittance_tax}%</span>
+                    <span className="text-muted-foreground/30">|</span>
+                    <span className="font-mono tabular-nums">Threshold: {emp.default_threshold}</span>
+                  </div>
 
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-center">
@@ -433,17 +438,27 @@ export default function EmployeesPage() {
                       Edit
                     </Button>
                   </div>
-                </div>
+                </button>
 
                 {/* Expanded invoice history */}
                 {isExpanded && (
                   <CardContent className="pt-0 border-t border-border/30">
-                    <h3 className="text-sm font-semibold mt-3 mb-2">Invoice History</h3>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mt-4 mb-3">
+                      Invoice History
+                    </p>
 
                     {loadingInvoices ? (
-                      <p className="text-sm text-muted-foreground py-2">Loading invoices...</p>
+                      <p className="text-sm text-muted-foreground py-4">Loading invoices...</p>
                     ) : invoices.length === 0 && directPayments.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-2">No invoices yet for this employee.</p>
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <div className="flex size-14 items-center justify-center rounded-2xl bg-muted/50 mb-4">
+                          <FileText className="size-7 text-muted-foreground/60" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground">No invoices yet</p>
+                        <p className="text-[13px] text-muted-foreground/60 mt-1">
+                          Invoices will appear here once distributions are processed.
+                        </p>
+                      </div>
                     ) : (
                       <>
                         <div className="overflow-x-auto">
@@ -461,23 +476,23 @@ export default function EmployeesPage() {
                           </TableHeader>
                           <TableBody>
                             {invoices.map((inv) => (
-                              <TableRow key={inv.id}>
+                              <TableRow key={inv.id} className="transition-all duration-200">
                                 <TableCell>
                                   {formatMonth(inv.reference_month)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono">
+                                <TableCell className="text-right font-mono tabular-nums">
                                   ${inv.salary_usd}
                                 </TableCell>
-                                <TableCell className="text-right font-mono hidden sm:table-cell">
+                                <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
                                   {formatNumber(inv.rate_applied, 2)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono hidden sm:table-cell">
+                                <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
                                   {formatPKR(inv.gross_pkr)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono text-red-400 hidden md:table-cell">
+                                <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
                                   -{formatPKR(inv.total_tax_pkr)}
                                 </TableCell>
-                                <TableCell className="text-right font-mono font-semibold text-emerald-400">
+                                <TableCell className="text-right font-mono tabular-nums font-semibold text-emerald-400">
                                   {formatPKR(inv.net_pkr)}
                                 </TableCell>
                                 <TableCell>
@@ -487,13 +502,14 @@ export default function EmployeesPage() {
                                       size="icon-xs"
                                       onClick={() => printInvoice(inv, emp.name)}
                                       title="Print invoice"
+                                      className="transition-all duration-200"
                                     >
                                       <Printer className="size-3.5" />
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="icon-xs"
-                                      className="text-muted-foreground hover:text-red-400"
+                                      className="text-muted-foreground hover:text-red-400 transition-all duration-200"
                                       onClick={() => deleteInvoice(inv)}
                                       title="Delete invoice"
                                     >
@@ -508,7 +524,9 @@ export default function EmployeesPage() {
                         </div>
                         {directPayments.length > 0 && (
                           <>
-                            <h3 className="text-sm font-semibold mt-4 mb-2">Direct Payments</h3>
+                            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mt-5 mb-3">
+                              Direct Payments
+                            </p>
                             <div className="overflow-x-auto">
                               <Table>
                                 <TableHeader>
@@ -521,7 +539,7 @@ export default function EmployeesPage() {
                                 </TableHeader>
                                 <TableBody>
                                   {directPayments.map((txn) => (
-                                    <TableRow key={txn.id}>
+                                    <TableRow key={txn.id} className="transition-all duration-200">
                                       <TableCell className="whitespace-nowrap">
                                         {new Date(txn.created_at).toLocaleDateString("en-PK", {
                                           day: "2-digit",
@@ -533,7 +551,7 @@ export default function EmployeesPage() {
                                       <TableCell>
                                         {txn.reference_month ? formatMonth(txn.reference_month) : "-"}
                                       </TableCell>
-                                      <TableCell className="text-right font-mono font-semibold text-emerald-400">
+                                      <TableCell className="text-right font-mono tabular-nums font-semibold text-emerald-400">
                                         {formatPKR(txn.amount_pkr)}
                                       </TableCell>
                                     </TableRow>
@@ -543,12 +561,12 @@ export default function EmployeesPage() {
                             </div>
                           </>
                         )}
-                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/30 text-sm">
-                          <span className="text-muted-foreground">
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30 text-sm">
+                          <span className="text-[13px] text-muted-foreground">
                             {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
                             {directPayments.length > 0 && ` + ${directPayments.length} direct payment${directPayments.length !== 1 ? "s" : ""}`}
                           </span>
-                          <span className="font-mono font-semibold">
+                          <span className="font-mono tabular-nums font-semibold">
                             Total earned: <span className="text-emerald-400">{formatPKR(totalEarned)}</span>
                           </span>
                         </div>
