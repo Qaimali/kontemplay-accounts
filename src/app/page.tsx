@@ -18,6 +18,7 @@ import {
   Lock,
   Sparkles,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 /* ─── Intersection Observer Hook ─── */
 function useInView(threshold = 0.15) {
@@ -181,11 +182,11 @@ export default function LandingPage() {
 
       {/* ── Grid texture ── */}
       <div
-        className="pointer-events-none fixed inset-0 opacity-[0.012]"
+        className="pointer-events-none fixed inset-0 opacity-[0.025] dark:opacity-[0.012]"
         aria-hidden
         style={{
           backgroundImage:
-            "linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)",
+            "linear-gradient(rgba(128,128,128,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(128,128,128,.1) 1px, transparent 1px)",
           backgroundSize: "80px 80px",
         }}
       />
@@ -209,6 +210,7 @@ export default function LandingPage() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link
               href="/login"
               className="hidden sm:inline-flex h-8 items-center px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

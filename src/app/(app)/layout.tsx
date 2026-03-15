@@ -4,6 +4,7 @@ import type { Owner } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
 import { SidebarNav } from "./sidebar-nav";
 import { MobileSidebar } from "./mobile-sidebar";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default async function AppLayout({
   children,
@@ -56,8 +57,9 @@ export default async function AppLayout({
         {/* Navigation */}
         <SidebarNav />
 
-        {/* User section */}
-        <div className="border-t border-sidebar-border px-4 py-4">
+        {/* Theme + User section */}
+        <div className="border-t border-sidebar-border px-4 py-4 space-y-3">
+          <ThemeToggle className="w-full justify-center" />
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-xs font-semibold text-primary ring-1 ring-primary/15">
               {initials}

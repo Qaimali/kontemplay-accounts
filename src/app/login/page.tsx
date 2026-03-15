@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,6 +40,11 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-background px-4">
+      {/* Theme toggle */}
+      <div className="absolute top-5 right-5 z-20">
+        <ThemeToggle />
+      </div>
+
       {/* Gradient mesh background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-[20%] -top-[20%] h-[700px] w-[700px] rounded-full bg-primary/[0.06] blur-[150px]" />
