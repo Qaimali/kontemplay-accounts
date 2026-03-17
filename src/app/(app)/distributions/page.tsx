@@ -21,7 +21,18 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Download, FileDown, Merge, Building2, History, Inbox } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronDown, Download, FileDown, Merge, Building2, History, Inbox, Pencil, Trash2 } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePDF, type InvoicePDFData } from "@/lib/invoice-pdf";
 
@@ -35,6 +46,73 @@ export default function DistributionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editDist, setEditDist] = useState<DistributionWithInvoices | null>(null);
+  const [editMonth, setEditMonth] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleteDist, setDeleteDist] = useState<DistributionWithInvoices | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!deleteDist) return;
+    setDeleting(true);
+
+    // Delete linked transactions first
+    await supabase
+      .from("transactions")
+      .delete()
+      .eq("distribution_id", deleteDist.id);
+
+    // Delete invoices
+    await supabase
+      .from("invoices")
+      .delete()
+      .eq("distribution_id", deleteDist.id);
+
+    // Delete the distribution
+    await supabase
+      .from("distributions")
+      .delete()
+      .eq("id", deleteDist.id);
+
+    setDeleting(false);
+    setDeleteDist(null);
+    setExpandedId(null);
+    fetchDistributions();
+  }
+
+  async function handleUpdateMonth() {
+    if (!editDist || !editMonth) return;
+    setSaving(true);
+    const oldMonth = editDist.reference_month;
+
+    // Update the distribution's reference_month
+    await supabase
+      .from("distributions")
+      .update({ reference_month: editMonth })
+      .eq("id", editDist.id);
+
+    // Update linked transactions reference_month and descriptions
+    const { data: txns } = await supabase
+      .from("transactions")
+      .select("id, description")
+      .eq("distribution_id", editDist.id);
+
+    if (txns) {
+      for (const txn of txns) {
+        const updates: { reference_month: string; description?: string } = {
+          reference_month: editMonth,
+        };
+        if (txn.description && txn.description.includes(oldMonth)) {
+          updates.description = txn.description.replace(oldMonth, editMonth);
+        }
+        await supabase.from("transactions").update(updates).eq("id", txn.id);
+      }
+    }
+
+    setSaving(false);
+    setEditDist(null);
+    fetchDistributions();
+  }
 
   const fetchDistributions = useCallback(async () => {
     setLoading(true);
@@ -240,6 +318,31 @@ export default function DistributionsPage() {
                     <Badge variant="secondary" className="ml-1">
                       {employeeCount} employee{employeeCount !== 1 ? "s" : ""}
                     </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="ml-1"
+                      title="Edit period"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditDist(dist);
+                        setEditMonth(dist.reference_month);
+                      }}
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className="ml-0.5 text-red-400 hover:text-red-500"
+                      title="Delete distribution"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteDist(dist);
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
                   </div>
                   <div className="flex items-center gap-4 pl-7 text-right text-sm sm:gap-6 sm:pl-0">
                     <div>
@@ -430,6 +533,60 @@ export default function DistributionsPage() {
           })}
         </div>
       )}
+
+      {/* Edit period dialog */}
+      <Dialog open={!!editDist} onOpenChange={(open) => !open && setEditDist(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Distribution Period</DialogTitle>
+            <DialogDescription>
+              Change the reference month for this distribution. This will also update linked transactions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="edit-month">Reference Month</Label>
+            <Input
+              id="edit-month"
+              type="month"
+              value={editMonth}
+              onChange={(e) => setEditMonth(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={handleUpdateMonth} disabled={saving || !editMonth}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteDist} onOpenChange={(open) => !open && setDeleteDist(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Distribution</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the{" "}
+              <span className="font-semibold text-foreground">
+                {deleteDist ? formatMonth(deleteDist.reference_month) : ""}
+              </span>{" "}
+              distribution? This will permanently remove all {deleteDist?.invoices.length ?? 0} invoices
+              and linked transactions. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" />}>
+              Cancel
+            </DialogClose>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
