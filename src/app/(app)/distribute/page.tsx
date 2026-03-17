@@ -55,6 +55,7 @@ export default function DistributePage() {
   const [remittanceTax, setRemittanceTax] = useState("0.25");
   const [totalUsd, setTotalUsd] = useState("");
   const [threshold, setThreshold] = useState("2");
+  const [operationalCost, setOperationalCost] = useState("1.5");
   const [referenceMonth, setReferenceMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -136,6 +137,7 @@ export default function DistributePage() {
     const res = calculateDistribution({
       amount_received_pkr: parseFloat(amountReceived),
       remittance_tax_percent: parseFloat(remittanceTax),
+      operational_cost_percent: parseFloat(operationalCost) || 0,
       total_usd: parseFloat(totalUsd),
       threshold: parseFloat(threshold),
       base_rate: rates!.base_rate,
@@ -371,6 +373,15 @@ export default function DistributePage() {
                   onChange={(e) => setThreshold(e.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="text-[13px]">Operational Cost (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={operationalCost}
+                  onChange={(e) => setOperationalCost(e.target.value)}
+                />
+              </div>
             </div>
 
             {rates && (
@@ -537,8 +548,10 @@ export default function DistributePage() {
                     <TableHead className="text-right">USD</TableHead>
                     <TableHead className="text-right hidden sm:table-cell">Rate</TableHead>
                     <TableHead className="text-right hidden sm:table-cell">Gross PKR</TableHead>
+                    <TableHead className="text-right hidden lg:table-cell">Threshold Saving</TableHead>
                     <TableHead className="text-right hidden md:table-cell">Contractor Tax</TableHead>
                     <TableHead className="text-right hidden md:table-cell">Remittance Tax</TableHead>
+                    <TableHead className="text-right hidden md:table-cell">Op. Cost</TableHead>
                     <TableHead className="text-right hidden sm:table-cell">Total Tax</TableHead>
                     <TableHead className="text-right">Net PKR</TableHead>
                   </TableRow>
@@ -556,11 +569,17 @@ export default function DistributePage() {
                       <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
                         {formatPKR(emp.gross_pkr)}
                       </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-emerald-400 hidden lg:table-cell">
+                        {formatPKR(emp.threshold_savings_pkr)}
+                      </TableCell>
                       <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
                         {formatPKR(emp.contractor_tax_pkr)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
                         {formatPKR(emp.remittance_tax_pkr)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                        {formatPKR(emp.operational_cost_pkr)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums text-red-400 hidden sm:table-cell">
                         {formatPKR(emp.total_tax_pkr)}
@@ -580,11 +599,17 @@ export default function DistributePage() {
                     <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
                       {formatPKR(result.summary.total_employee_gross)}
                     </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums text-emerald-400 hidden lg:table-cell">
+                      {formatPKR(result.company.threshold_savings)}
+                    </TableCell>
                     <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
                       {formatPKR(result.summary.total_contractor_tax)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
-                      {formatPKR(result.summary.total_employee_tax - result.summary.total_contractor_tax)}
+                      {formatPKR(result.summary.total_employee_tax - result.summary.total_contractor_tax - result.company.operational_cost)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
+                      {formatPKR(result.company.operational_cost)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
                       {formatPKR(result.summary.total_employee_tax)}
@@ -615,6 +640,8 @@ export default function DistributePage() {
                 <div className="text-right font-mono tabular-nums font-medium">{formatPKR(result.company.gross_from_usd)}</div>
                 <div className="text-muted-foreground">Threshold Savings</div>
                 <div className="text-right font-mono tabular-nums font-medium text-emerald-400">{formatPKR(result.company.threshold_savings)}</div>
+                <div className="text-muted-foreground">Operational Cost ({operationalCost}%)</div>
+                <div className="text-right font-mono tabular-nums font-medium text-emerald-400">{formatPKR(result.company.operational_cost)}</div>
                 <div className="text-muted-foreground">Total before tax</div>
                 <div className="text-right font-mono tabular-nums font-medium">{formatPKR(result.company.total_before_tax)}</div>
                 <div className="text-muted-foreground">Remittance tax ({remittanceTax}%)</div>
@@ -771,6 +798,7 @@ export default function DistributePage() {
                               <tr><th>Gross (PKR)</th><td class="mono">${formatPKR(emp.gross_pkr)}</td></tr>
                               <tr><th>Contractor Tax (${emp.contractor_tax_percent}%)</th><td class="mono red">-${formatPKR(emp.contractor_tax_pkr)}</td></tr>
                               <tr><th>Remittance Tax (${emp.remittance_tax_percent}%)</th><td class="mono red">-${formatPKR(emp.remittance_tax_pkr)}</td></tr>
+                              <tr><th>Operational Cost (${operationalCost}%)</th><td class="mono red">-${formatPKR(emp.operational_cost_pkr)}</td></tr>
                               <tr><th>Total Tax</th><td class="mono red">-${formatPKR(emp.total_tax_pkr)}</td></tr>
                               <tr class="net-row"><th>Net Payable (PKR)</th><td class="mono green">${formatPKR(emp.net_pkr)}</td></tr>
                             </table>
@@ -806,6 +834,9 @@ export default function DistributePage() {
 
                   <div className="text-muted-foreground">Remittance Tax ({emp.remittance_tax_percent}%)</div>
                   <div className="text-right font-mono tabular-nums font-medium text-red-400">-{formatPKR(emp.remittance_tax_pkr)}</div>
+
+                  <div className="text-muted-foreground">Operational Cost ({operationalCost}%)</div>
+                  <div className="text-right font-mono tabular-nums font-medium text-red-400">-{formatPKR(emp.operational_cost_pkr)}</div>
 
                   <div className="text-muted-foreground">Total Tax</div>
                   <div className="text-right font-mono tabular-nums font-medium text-red-400">-{formatPKR(emp.total_tax_pkr)}</div>

@@ -118,8 +118,10 @@ export interface EmployeeDistResult {
   contractor_tax_percent: number;
   remittance_tax_percent: number;
   gross_pkr: number;
+  threshold_savings_pkr: number;
   contractor_tax_pkr: number;
   remittance_tax_pkr: number;
+  operational_cost_pkr: number;
   total_tax_pkr: number;
   net_pkr: number;
 }
@@ -130,6 +132,7 @@ export interface DistributionResult {
     usd: number;
     gross_from_usd: number;
     threshold_savings: number;
+    operational_cost: number;
     total_before_tax: number;
     remittance_tax_amount: number;
     net_pkr: number;
