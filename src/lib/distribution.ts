@@ -78,10 +78,14 @@ export function calculateDistribution(input: DistributionInput): DistributionRes
   const company_usd = input.total_usd - total_employee_usd;
   const company_gross_from_usd = company_usd * input.base_rate;
   const company_total_before_tax = company_gross_from_usd + total_threshold_savings + total_operational_cost;
+
+  // For grand total verification: op cost is a transfer from employees to company,
+  // not new money — so exclude it from the employee tax bucket to avoid double-counting.
+  const total_employee_tax_for_verification = total_employee_tax - total_operational_cost;
   const company_remittance_tax = company_total_before_tax * (input.remittance_tax_percent / 100);
   const company_net = company_total_before_tax - company_remittance_tax;
 
-  const grand_total = total_employee_net + total_employee_tax + company_net + company_remittance_tax;
+  const grand_total = total_employee_net + total_employee_tax_for_verification + company_net + company_remittance_tax;
   const difference = original_amount - grand_total;
 
   return {
