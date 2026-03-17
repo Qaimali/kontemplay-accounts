@@ -92,6 +92,8 @@ export interface InvoicePDFData {
   remittanceTaxPkr: number;
   contractorTaxPercent: number;
   contractorTaxPkr: number;
+  operationalCostPercent: number;
+  operationalCostPkr: number;
   totalTaxPercent: number;
   totalTaxPkr: number;
   netPkr: number;
@@ -156,6 +158,13 @@ export function InvoicePDF({ data }: { data: InvoicePDFData }) {
             <Text style={styles.colLeft}>{"  "}Contractor ({data.contractorTaxPercent}%)</Text>
             <Text style={styles.colRight}>{fmtPKR(data.contractorTaxPkr)}</Text>
           </View>
+
+          {data.operationalCostPkr > 0 && (
+            <View style={styles.tableRow}>
+              <Text style={styles.colLeft}>{"  "}Operational Cost ({data.operationalCostPercent.toFixed(2)}%)</Text>
+              <Text style={styles.colRight}>{fmtPKR(data.operationalCostPkr)}</Text>
+            </View>
+          )}
 
           <View style={styles.tableRow}>
             <Text style={styles.colLeft}>{"  "}Total Tax ({data.totalTaxPercent}%)</Text>

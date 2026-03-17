@@ -150,6 +150,10 @@ export default function DistributionsPage() {
     dist: DistributionWithInvoices,
     inv: Invoice & { employee: { name: string } }
   ): InvoicePDFData {
+    const operationalCostPkr = inv.total_tax_pkr - inv.contractor_tax_pkr - inv.remittance_tax_pkr;
+    const operationalCostPercent = inv.gross_pkr > 0 ? (operationalCostPkr / inv.gross_pkr) * 100 : 0;
+    const totalTaxPercent = inv.gross_pkr > 0 ? (inv.total_tax_pkr / inv.gross_pkr) * 100 : 0;
+
     return {
       employeeName: inv.employee?.name ?? "Unknown",
       month: formatMonth(dist.reference_month),
@@ -165,7 +169,9 @@ export default function DistributionsPage() {
       remittanceTaxPkr: inv.remittance_tax_pkr,
       contractorTaxPercent: inv.contractor_tax_percent,
       contractorTaxPkr: inv.contractor_tax_pkr,
-      totalTaxPercent: inv.remittance_tax_percent + inv.contractor_tax_percent,
+      operationalCostPercent: Math.round(operationalCostPercent * 100) / 100,
+      operationalCostPkr: Math.max(0, operationalCostPkr),
+      totalTaxPercent: Math.round(totalTaxPercent * 100) / 100,
       totalTaxPkr: inv.total_tax_pkr,
       netPkr: inv.net_pkr,
     };
@@ -227,6 +233,7 @@ export default function DistributionsPage() {
     const totalContractorTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.contractor_tax_pkr, 0);
     const totalTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.total_tax_pkr, 0);
     const totalNetPkr = invoicesToCombine.reduce((s, inv) => s + inv.net_pkr, 0);
+    const totalOpCostPkr = Math.max(0, totalTaxPkr - totalContractorTaxPkr - totalRemittanceTaxPkr);
 
     // Blended exchange rate
     const blendedRate = totalSalaryUsd > 0 ? totalGrossPkr / totalSalaryUsd : 0;
@@ -234,6 +241,8 @@ export default function DistributionsPage() {
     // Blended tax percentages
     const remittancePct = totalGrossPkr > 0 ? (totalRemittanceTaxPkr / totalGrossPkr) * 100 : 0;
     const contractorPct = totalGrossPkr > 0 ? (totalContractorTaxPkr / totalGrossPkr) * 100 : 0;
+    const opCostPct = totalGrossPkr > 0 ? (totalOpCostPkr / totalGrossPkr) * 100 : 0;
+    const totalTaxPct = totalGrossPkr > 0 ? (totalTaxPkr / totalGrossPkr) * 100 : 0;
 
     const data: InvoicePDFData = {
       employeeName: "Qaim Ali",
@@ -250,7 +259,9 @@ export default function DistributionsPage() {
       remittanceTaxPkr: totalRemittanceTaxPkr,
       contractorTaxPercent: Math.round(contractorPct * 100) / 100,
       contractorTaxPkr: totalContractorTaxPkr,
-      totalTaxPercent: Math.round((remittancePct + contractorPct) * 100) / 100,
+      operationalCostPercent: Math.round(opCostPct * 100) / 100,
+      operationalCostPkr: totalOpCostPkr,
+      totalTaxPercent: Math.round(totalTaxPct * 100) / 100,
       totalTaxPkr: totalTaxPkr,
       netPkr: totalNetPkr,
     };
