@@ -1,4 +1,5 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { query } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 import { formatPKR, formatMonth } from "@/lib/format";
 import type { Transaction, TransactionType, Owner } from "@/lib/types";
 import {
@@ -49,19 +50,17 @@ const typeBadgeVariant: Record<
 };
 
 export default async function DashboardPage() {
-  const supabase = await createServerSupabaseClient();
+  await requireAuth();
 
-  const [{ data: transactions }, { data: owners }] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .returns<Transaction[]>(),
-    supabase.from("owners").select("*").returns<Owner[]>(),
+  const [rawTransactions, allOwners] = await Promise.all([
+    query<Transaction & { is_credit: number }>("SELECT * FROM transactions ORDER BY created_at DESC"),
+    query<Owner>("SELECT * FROM owners"),
   ]);
 
-  const allTxns = transactions ?? [];
-  const allOwners = owners ?? [];
+  const allTxns: Transaction[] = rawTransactions.map(t => {
+    const txn = t as Record<string, unknown>;
+    return { ...txn, is_credit: !!txn.is_credit } as Transaction;
+  });
 
   const ownerNames: Record<string, string> = {};
   for (const o of allOwners) {

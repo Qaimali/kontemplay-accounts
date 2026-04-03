@@ -1,5 +1,6 @@
+import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { query, queryOne, execute, uuid } from "@/lib/db";
 import type { Owner } from "@/lib/types";
 import { SignOutButton } from "./sign-out-button";
 import { SidebarNav } from "./sidebar-nav";
@@ -11,23 +12,36 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createServerSupabaseClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await currentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  const { data: owner } = await supabase
-    .from("owners")
-    .select("*")
-    .eq("auth_id", user.id)
-    .single<Owner>();
+  // Find or create owner record for this Clerk user
+  let owner = await queryOne<Owner>(
+    "SELECT * FROM owners WHERE clerk_id = ?",
+    [user.id]
+  );
 
-  const displayName = owner?.name ?? user.email ?? "User";
+  if (!owner) {
+    const id = uuid();
+    const name = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || (user.emailAddresses[0]?.emailAddress ?? "User");
+    const email = user.emailAddresses[0]?.emailAddress ?? "";
+    await execute(
+      "INSERT OR IGNORE INTO owners (id, clerk_id, name, email) VALUES (?, ?, ?, ?)",
+      [id, user.id, name, email]
+    );
+    owner = await queryOne<Owner>(
+      "SELECT * FROM owners WHERE clerk_id = ?",
+      [user.id]
+    );
+    if (!owner) {
+      owner = { id, clerk_id: user.id, name, email, created_at: new Date().toISOString() };
+    }
+  }
+
+  const displayName = owner.name ?? user.emailAddresses[0]?.emailAddress ?? "User";
   const initials = displayName
     .split(" ")
     .map((w) => w[0])

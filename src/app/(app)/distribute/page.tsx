@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { calculateRates, calculateDistribution } from "@/lib/distribution";
 import type { Employee, EmployeeDistInput, DistributionResult } from "@/lib/types";
 import { formatPKR, formatNumber } from "@/lib/format";
@@ -45,8 +44,6 @@ const STEP_META: Record<Step, { label: string; icon: React.ElementType }> = {
 };
 
 export default function DistributePage() {
-  const supabase = createClient();
-
   // Step tracking
   const [step, setStep] = useState<Step>("input");
 
@@ -82,11 +79,8 @@ export default function DistributePage() {
   // Load employees on mount
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from("employees")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+      const res = await fetch("/api/employees?is_active=true");
+      const data = await res.json();
 
       if (data) {
         setEmployees(
@@ -162,44 +156,13 @@ export default function DistributePage() {
 
     try {
       // Get current user's owner id
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const { data: owner } = await supabase
-        .from("owners")
-        .select("id")
-        .eq("auth_id", user.id)
-        .single();
-
+      const ownerRes = await fetch("/api/owners/me");
+      const owner = await ownerRes.json();
       const ownerId = owner?.id;
 
-      // 1. Create distribution record
       const totalEmployeeUsd = result.employees.reduce((s, e) => s + e.salary_usd, 0);
-      const { data: dist, error: distError } = await supabase
-        .from("distributions")
-        .insert({
-          reference_month: referenceMonth,
-          total_usd: parseFloat(totalUsd),
-          distribute_usd: totalEmployeeUsd,
-          amount_received_pkr: parseFloat(amountReceived),
-          remittance_tax_percent: parseFloat(remittanceTax),
-          base_rate: rates.base_rate,
-          effective_rate: rates.effective_rate,
-          threshold: parseFloat(threshold),
-          company_gross_pkr: result.company.total_before_tax,
-          company_net_pkr: result.company.net_pkr,
-          created_by: ownerId,
-        })
-        .select()
-        .single();
 
-      if (distError) throw distError;
-
-      // 2. Create invoices
       const invoiceRows = result.employees.map((emp) => ({
-        distribution_id: dist.id,
         employee_id: emp.employee_id,
         salary_usd: emp.salary_usd,
         rate_applied: emp.rate,
@@ -213,52 +176,56 @@ export default function DistributePage() {
         net_pkr: emp.net_pkr,
       }));
 
-      const { data: invoices, error: invError } = await supabase
-        .from("invoices")
-        .insert(invoiceRows)
-        .select();
-
-      if (invError) throw invError;
-
-      // 3. Save as transactions if checked
+      const txns = [];
       if (saveAsTransactions) {
-        const txns = [];
-
-        // Salary payout debits
         for (let i = 0; i < result.employees.length; i++) {
           const emp = result.employees[i];
-          const invoice = invoices[i];
           txns.push({
-            type: "salary_payout" as const,
+            type: "salary_payout",
             amount_pkr: emp.net_pkr,
             is_credit: false,
             description: `${emp.name} - salary ${referenceMonth}`,
             reference_month: referenceMonth,
-            distribution_id: dist.id,
-            invoice_id: invoice.id,
             employee_id: emp.employee_id,
+            invoice_index: i,
             created_by: ownerId,
           });
         }
-
-        // Contractor tax debit (summed)
         if (result.summary.total_contractor_tax > 0) {
           txns.push({
-            type: "contractor_tax" as const,
+            type: "contractor_tax",
             amount_pkr: result.summary.total_contractor_tax,
             is_credit: false,
             description: `Contractor tax - ${referenceMonth}`,
             reference_month: referenceMonth,
-            distribution_id: dist.id,
             created_by: ownerId,
           });
         }
-
-        const { error: txnError } = await supabase.from("transactions").insert(txns);
-        if (txnError) throw txnError;
       }
 
+      const res = await fetch("/api/distributions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference_month: referenceMonth,
+          total_usd: parseFloat(totalUsd),
+          distribute_usd: totalEmployeeUsd,
+          amount_received_pkr: parseFloat(amountReceived),
+          remittance_tax_percent: parseFloat(remittanceTax),
+          base_rate: rates.base_rate,
+          effective_rate: rates.effective_rate,
+          threshold: parseFloat(threshold),
+          company_gross_pkr: result.company.total_before_tax,
+          company_net_pkr: result.company.net_pkr,
+          created_by: ownerId,
+          invoices: invoiceRows,
+          transactions: txns,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save distribution");
+      const dist = await res.json();
       setSavedDistId(dist.id);
+
       setStep("done");
       toast.success("Distribution saved! Invoices created.");
     } catch (err) {

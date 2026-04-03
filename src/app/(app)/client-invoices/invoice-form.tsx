@@ -3,7 +3,6 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { pdf } from "@react-pdf/renderer";
-import { createClient } from "@/lib/supabase/client";
 import {
   ClientInvoicePDF,
   type ClientInvoiceLineItem,
@@ -62,7 +61,6 @@ const STATUS_OPTIONS = [
 ];
 
 export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
-  const supabase = createClient();
   const router = useRouter();
 
   const [invoiceNumber, setInvoiceNumber] = useState(initialData.invoiceNumber);
@@ -129,14 +127,19 @@ export function InvoiceForm({ editId, initialData }: InvoiceFormProps) {
     };
 
     if (editId) {
-      const { error } = await supabase
-        .from("client_invoices")
-        .update(payload)
-        .eq("id", editId);
-      return !error;
+      const res = await fetch(`/api/client-invoices/${editId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return res.ok;
     } else {
-      const { error } = await supabase.from("client_invoices").insert(payload);
-      return !error;
+      const res = await fetch("/api/client-invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return res.ok;
     }
   }
 

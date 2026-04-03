@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { InvoiceForm } from "../invoice-form";
 import type { ClientInvoiceLineItem } from "@/lib/client-invoice-pdf";
 
@@ -56,18 +55,13 @@ function getDefaultMonth(): string {
 }
 
 export default function NewClientInvoicePage() {
-  const supabase = createClient();
   const [nextNumber, setNextNumber] = useState<string | null>(null);
   const [nextMonth, setNextMonth] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("client_invoices")
-      .select("invoice_number, line_items")
-      .order("invoice_number", { ascending: false })
-      .limit(1)
-      .then(({ data }) => {
-        const last = data?.[0];
+    fetch("/api/client-invoices/latest")
+      .then((r) => r.json())
+      .then((last) => {
         setNextNumber(String((last?.invoice_number ?? 0) + 1));
 
         // Derive next month from last invoice's line items

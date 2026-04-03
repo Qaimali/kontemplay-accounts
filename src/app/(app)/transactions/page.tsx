@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+
 import { formatPKR, formatMonth } from "@/lib/format";
 import { exportToCSV } from "@/lib/export";
 import type { Transaction, TransactionType, Owner } from "@/lib/types";
@@ -92,7 +92,6 @@ function isCreditType(type: TransactionType): boolean {
 }
 
 export default function TransactionsPage() {
-  const supabase = createClient();
 
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [owners, setOwners] = useState<Owner[]>([]);
@@ -135,21 +134,15 @@ export default function TransactionsPage() {
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("transactions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .returns<Transaction[]>();
+    const res = await fetch("/api/transactions");
+    const data = await res.json();
     setAllTransactions(data ?? []);
     setLoading(false);
   }, []);
 
   const fetchOwners = useCallback(async () => {
-    const { data } = await supabase
-      .from("owners")
-      .select("*")
-      .order("name")
-      .returns<Owner[]>();
+    const res = await fetch("/api/owners");
+    const data = await res.json();
     setOwners(data ?? []);
   }, []);
 
@@ -222,15 +215,20 @@ export default function TransactionsPage() {
     const needsOwner =
       formType === "owner_investment" || formType === "owner_repayment";
 
-    const { error } = await supabase.from("transactions").insert({
-      type: formType,
-      amount_pkr: amount,
-      is_credit: isCredit,
-      description: formDescription || null,
-      reference_month: formReferenceMonth || null,
-      owner_id: needsOwner && formOwnerId ? formOwnerId : null,
-      created_at: formDate ? `${formDate}T00:00:00+05:00` : undefined,
+    const res = await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: formType,
+        amount_pkr: amount,
+        is_credit: isCredit,
+        description: formDescription || null,
+        reference_month: formReferenceMonth || null,
+        owner_id: needsOwner && formOwnerId ? formOwnerId : null,
+        created_at: formDate ? `${formDate}T00:00:00+05:00` : undefined,
+      }),
     });
+    const error = !res.ok;
 
     setSaving(false);
 
@@ -269,15 +267,14 @@ export default function TransactionsPage() {
     if (!confirmed) return;
 
     setDeleting(true);
-    const { error } = await supabase
-      .from("transactions")
-      .delete()
-      .in("id", Array.from(selected));
+    await fetch("/api/transactions/bulk-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
 
-    if (!error) {
-      setSelected(new Set());
-      fetchTransactions();
-    }
+    setSelected(new Set());
+    fetchTransactions();
     setDeleting(false);
   }
 
@@ -285,7 +282,7 @@ export default function TransactionsPage() {
     const confirmed = window.confirm("Delete this transaction? This cannot be undone.");
     if (!confirmed) return;
 
-    await supabase.from("transactions").delete().eq("id", id);
+    await fetch(`/api/transactions/${id}`, { method: "DELETE" });
     setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
     fetchTransactions();
   }
@@ -311,9 +308,10 @@ export default function TransactionsPage() {
     const isCredit = isCreditType(editType);
     const needsOwner = editType === "owner_investment" || editType === "owner_repayment";
 
-    const { error } = await supabase
-      .from("transactions")
-      .update({
+    const res = await fetch(`/api/transactions/${editingTxn.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         type: editType,
         amount_pkr: amount,
         is_credit: isCredit,
@@ -321,8 +319,9 @@ export default function TransactionsPage() {
         reference_month: editReferenceMonth || null,
         owner_id: needsOwner && editOwnerId ? editOwnerId : null,
         created_at: editDate ? `${editDate}T00:00:00+05:00` : undefined,
-      })
-      .eq("id", editingTxn.id);
+      }),
+    });
+    const error = !res.ok;
 
     setEditSaving(false);
 

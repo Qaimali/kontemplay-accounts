@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { pdf } from "@react-pdf/renderer";
-import { createClient } from "@/lib/supabase/client";
 import { ClientInvoicePDF } from "@/lib/client-invoice-pdf";
 import { formatMonth } from "@/lib/format";
 import type { ClientInvoice, ClientInvoiceStatus } from "@/lib/types";
@@ -49,7 +48,6 @@ const statusBadge: Record<ClientInvoiceStatus, { label: string; variant: "defaul
 };
 
 export default function ClientInvoicesPage() {
-  const supabase = createClient();
   const [invoices, setInvoices] = useState<ClientInvoice[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,11 +59,8 @@ export default function ClientInvoicesPage() {
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("client_invoices")
-      .select("*")
-      .order("invoice_number", { ascending: false })
-      .returns<ClientInvoice[]>();
+    const res = await fetch("/api/client-invoices");
+    const data = await res.json();
     setInvoices(data ?? []);
     setLoading(false);
   }, []);
@@ -99,14 +94,18 @@ export default function ClientInvoicesPage() {
   async function handleDelete(id: string) {
     const confirmed = window.confirm("Delete this invoice? This cannot be undone.");
     if (!confirmed) return;
-    await supabase.from("client_invoices").delete().eq("id", id);
+    await fetch(`/api/client-invoices/${id}`, { method: "DELETE" });
     fetchInvoices();
   }
 
   async function cycleStatus(inv: ClientInvoice) {
     // draft -> sent -> received (opens dialog)
     if (inv.status === "draft" || inv.status === "overdue") {
-      await supabase.from("client_invoices").update({ status: "sent" }).eq("id", inv.id);
+      await fetch(`/api/client-invoices/${inv.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "sent" }),
+      });
       fetchInvoices();
     } else if (inv.status === "sent") {
       openReceiveDialog(inv);
@@ -130,20 +129,24 @@ export default function ClientInvoicesPage() {
     const month = receivingInvoice.invoice_month ?? undefined;
 
     // Create client_payment credit transaction
-    await supabase.from("transactions").insert({
-      type: "client_payment",
-      amount_pkr: amount,
-      is_credit: true,
-      description: `Invoice #${receivingInvoice.invoice_number} - ${receivingInvoice.bill_to}${month ? ` (${month})` : ""}`,
-      reference_month: month,
-      created_at: new Date().toISOString(),
+    await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "client_payment",
+        amount_pkr: amount,
+        is_credit: true,
+        description: `Invoice #${receivingInvoice.invoice_number} - ${receivingInvoice.bill_to}${month ? ` (${month})` : ""}`,
+        reference_month: month,
+      }),
     });
 
     // Update invoice status to received
-    await supabase
-      .from("client_invoices")
-      .update({ status: "received" })
-      .eq("id", receivingInvoice.id);
+    await fetch(`/api/client-invoices/${receivingInvoice.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "received" }),
+    });
 
     setReceiveProcessing(false);
     setReceiveDialogOpen(false);

@@ -1,6 +1,6 @@
 export interface Owner {
   id: string;
-  auth_id: string;
+  clerk_id: string;
   name: string;
   email: string;
   created_at: string;

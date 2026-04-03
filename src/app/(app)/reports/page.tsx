@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatPKR, formatMonth } from "@/lib/format";
 import { exportToCSV } from "@/lib/export";
 import type { Transaction, TransactionType } from "@/lib/types";
@@ -48,19 +47,14 @@ interface MonthlyPL {
 }
 
 export default function ReportsPage() {
-  const supabase = createClient();
   const [rows, setRows] = useState<MonthlyPL[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("transactions")
-      .select("*")
-      .order("reference_month", { ascending: true });
-
-    const transactions = (data as Transaction[] | null) ?? [];
+    const res = await fetch("/api/transactions?order_by=reference_month&order=asc");
+    const transactions = (await res.json()) ?? [];
 
     const monthMap = new Map<string, Transaction[]>();
     for (const txn of transactions) {

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { InvoiceForm } from "../invoice-form";
 import type { ClientInvoice } from "@/lib/types";
 
@@ -13,17 +12,13 @@ Account Holder Name: Kontemplay (Private) Limited`;
 
 export default function EditClientInvoicePage() {
   const { id } = useParams<{ id: string }>();
-  const supabase = createClient();
   const [invoice, setInvoice] = useState<ClientInvoice | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("client_invoices")
-      .select("*")
-      .eq("id", id)
-      .single<ClientInvoice>()
-      .then(({ data }) => {
+    fetch(`/api/client-invoices/${id}`)
+      .then((r) => r.json())
+      .then((data) => {
         setInvoice(data);
         setLoading(false);
       });

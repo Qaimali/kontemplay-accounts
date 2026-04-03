@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { Owner, Transaction } from "@/lib/types";
 import { formatPKR } from "@/lib/format";
 import {
@@ -61,7 +60,6 @@ type OwnerWithBalances = Owner & {
 };
 
 export default function OwnersPage() {
-  const supabase = createClient();
   const [owners, setOwners] = useState<OwnerWithBalances[]>([]);
   const [rawOwners, setRawOwners] = useState<Owner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,31 +72,25 @@ export default function OwnersPage() {
   const [saving, setSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const [{ data: ownersData }, { data: txnData }] = await Promise.all([
-      supabase.from("owners").select("*").order("name").returns<Owner[]>(),
-      supabase
-        .from("transactions")
-        .select("*")
-        .in("type", ["owner_investment", "owner_repayment"])
-        .order("created_at", { ascending: false })
-        .returns<Transaction[]>(),
+    const [ownersRes, txnRes] = await Promise.all([
+      fetch("/api/owners"),
+      fetch("/api/transactions?types=owner_investment,owner_repayment"),
     ]);
-
-    const ownersList = ownersData ?? [];
-    const txns = txnData ?? [];
+    const ownersList = (await ownersRes.json()) ?? [];
+    const txns = (await txnRes.json()) ?? [];
 
     setRawOwners(ownersList);
 
-    const enriched: OwnerWithBalances[] = ownersList.map((owner) => {
-      const ownerTxns = txns.filter((t) => t.owner_id === owner.id);
+    const enriched: OwnerWithBalances[] = ownersList.map((owner: Owner) => {
+      const ownerTxns = txns.filter((t: Transaction) => t.owner_id === owner.id);
 
       const totalInvested = ownerTxns
-        .filter((t) => t.type === "owner_investment")
-        .reduce((sum, t) => sum + t.amount_pkr, 0);
+        .filter((t: Transaction) => t.type === "owner_investment")
+        .reduce((sum: number, t: Transaction) => sum + t.amount_pkr, 0);
 
       const totalRepaid = ownerTxns
-        .filter((t) => t.type === "owner_repayment")
-        .reduce((sum, t) => sum + t.amount_pkr, 0);
+        .filter((t: Transaction) => t.type === "owner_repayment")
+        .reduce((sum: number, t: Transaction) => sum + t.amount_pkr, 0);
 
       return {
         ...owner,
@@ -111,7 +103,7 @@ export default function OwnersPage() {
 
     setOwners(enriched);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -121,14 +113,19 @@ export default function OwnersPage() {
     if (!investForm.owner_id || !investForm.amount) return;
     setSaving(true);
 
-    const { error } = await supabase.from("transactions").insert({
-      type: "owner_investment",
-      is_credit: true,
-      owner_id: investForm.owner_id,
-      amount_pkr: parseFloat(investForm.amount),
-      description: investForm.description.trim() || null,
-      reference_month: investForm.reference_month || null,
+    const res = await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "owner_investment",
+        is_credit: true,
+        owner_id: investForm.owner_id,
+        amount_pkr: parseFloat(investForm.amount),
+        description: investForm.description.trim() || null,
+        reference_month: investForm.reference_month || null,
+      }),
     });
+    const error = !res.ok;
 
     setSaving(false);
 
@@ -147,14 +144,19 @@ export default function OwnersPage() {
     if (!repayForm.owner_id || !repayForm.amount) return;
     setSaving(true);
 
-    const { error } = await supabase.from("transactions").insert({
-      type: "owner_repayment",
-      is_credit: false,
-      owner_id: repayForm.owner_id,
-      amount_pkr: parseFloat(repayForm.amount),
-      description: repayForm.description.trim() || null,
-      reference_month: repayForm.reference_month || null,
+    const res = await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "owner_repayment",
+        is_credit: false,
+        owner_id: repayForm.owner_id,
+        amount_pkr: parseFloat(repayForm.amount),
+        description: repayForm.description.trim() || null,
+        reference_month: repayForm.reference_month || null,
+      }),
     });
+    const error = !res.ok;
 
     setSaving(false);
 

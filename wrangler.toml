@@ -1,0 +1,7 @@
+name = "kontemplay-finance"
+compatibility_date = "2024-12-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kontemplay-finance"
+database_id = "0908e2dd-0dbf-45b0-bb47-a89ec8e0a752"

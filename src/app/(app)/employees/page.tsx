@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { Employee, Invoice, Distribution, Transaction } from "@/lib/types";
 import { formatUSD, formatPKR, formatNumber, formatMonth } from "@/lib/format";
 import {
@@ -109,7 +108,6 @@ function printInvoice(inv: InvoiceWithMonth, empName: string) {
 }
 
 export default function EmployeesPage() {
-  const supabase = useMemo(() => createClient(), []);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -124,14 +122,11 @@ export default function EmployeesPage() {
   const [loadingInvoices, setLoadingInvoices] = useState(false);
 
   const fetchEmployees = useCallback(async () => {
-    const { data } = await supabase
-      .from("employees")
-      .select("*")
-      .order("name")
-      .returns<Employee[]>();
+    const res = await fetch("/api/employees");
+    const data = await res.json();
     setEmployees(data ?? []);
     setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchEmployees();
@@ -140,32 +135,19 @@ export default function EmployeesPage() {
   async function fetchInvoices(employeeId: string) {
     setLoadingInvoices(true);
 
-    // Fetch distribution-based invoices
-    const { data } = await supabase
-      .from("invoices")
-      .select("*, distributions!inner(reference_month)")
-      .eq("employee_id", employeeId)
-      .order("created_at", { ascending: false });
-
-    const mapped: InvoiceWithMonth[] = (data ?? []).map((row: Record<string, unknown>) => {
-      const dist = row.distributions as { reference_month: string } | null;
-      return {
-        ...(row as unknown as Invoice),
-        reference_month: dist?.reference_month ?? "Unknown",
-      };
-    });
+    // Distribution-based invoices
+    const invRes = await fetch(`/api/employees/${employeeId}/invoices`);
+    const invData = await invRes.json();
+    const mapped = (invData ?? []).map((row: any) => ({
+      ...row,
+      reference_month: row.reference_month ?? "Unknown",
+    }));
     setInvoices(mapped);
 
-    // Fetch direct transactions linked to employee (not from distributions)
-    const { data: directTxns } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("employee_id", employeeId)
-      .is("invoice_id", null)
-      .is("distribution_id", null)
-      .order("created_at", { ascending: false })
-      .returns<Transaction[]>();
-    setDirectPayments(directTxns ?? []);
+    // Direct transactions
+    const txnRes = await fetch(`/api/employees/${employeeId}/transactions`);
+    const txnData = await txnRes.json();
+    setDirectPayments(txnData ?? []);
 
     setLoadingInvoices(false);
   }
@@ -207,9 +189,17 @@ export default function EmployeesPage() {
     };
 
     if (editingId) {
-      await supabase.from("employees").update(payload).eq("id", editingId);
+      await fetch(`/api/employees/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
     } else {
-      await supabase.from("employees").insert(payload);
+      await fetch("/api/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
     }
 
     setSaving(false);
@@ -218,10 +208,11 @@ export default function EmployeesPage() {
   }
 
   async function toggleActive(emp: Employee) {
-    await supabase
-      .from("employees")
-      .update({ is_active: !emp.is_active })
-      .eq("id", emp.id);
+    await fetch(`/api/employees/${emp.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_active: !emp.is_active }),
+    });
     await fetchEmployees();
   }
 

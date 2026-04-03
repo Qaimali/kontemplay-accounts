@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { formatPKR, formatUSD, formatMonth, formatNumber } from "@/lib/format";
 import { exportToCSV } from "@/lib/export";
 import type { Distribution, Invoice, Transaction } from "@/lib/types";
@@ -41,7 +40,6 @@ interface DistributionWithInvoices extends Distribution {
 }
 
 export default function DistributionsPage() {
-  const supabase = createClient();
   const [distributions, setDistributions] = useState<DistributionWithInvoices[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,23 +54,7 @@ export default function DistributionsPage() {
     if (!deleteDist) return;
     setDeleting(true);
 
-    // Delete linked transactions first
-    await supabase
-      .from("transactions")
-      .delete()
-      .eq("distribution_id", deleteDist.id);
-
-    // Delete invoices
-    await supabase
-      .from("invoices")
-      .delete()
-      .eq("distribution_id", deleteDist.id);
-
-    // Delete the distribution
-    await supabase
-      .from("distributions")
-      .delete()
-      .eq("id", deleteDist.id);
+    await fetch(`/api/distributions/${deleteDist.id}`, { method: "DELETE" });
 
     setDeleting(false);
     setDeleteDist(null);
@@ -83,31 +65,12 @@ export default function DistributionsPage() {
   async function handleUpdateMonth() {
     if (!editDist || !editMonth) return;
     setSaving(true);
-    const oldMonth = editDist.reference_month;
 
-    // Update the distribution's reference_month
-    await supabase
-      .from("distributions")
-      .update({ reference_month: editMonth })
-      .eq("id", editDist.id);
-
-    // Update linked transactions reference_month and descriptions
-    const { data: txns } = await supabase
-      .from("transactions")
-      .select("id, description")
-      .eq("distribution_id", editDist.id);
-
-    if (txns) {
-      for (const txn of txns) {
-        const updates: { reference_month: string; description?: string } = {
-          reference_month: editMonth,
-        };
-        if (txn.description && txn.description.includes(oldMonth)) {
-          updates.description = txn.description.replace(oldMonth, editMonth);
-        }
-        await supabase.from("transactions").update(updates).eq("id", txn.id);
-      }
-    }
+    await fetch(`/api/distributions/${editDist.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reference_month: editMonth, old_reference_month: editDist.reference_month }),
+    });
 
     setSaving(false);
     setEditDist(null);
@@ -116,21 +79,16 @@ export default function DistributionsPage() {
 
   const fetchDistributions = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("distributions")
-      .select("*, invoices(*, employee:employees(name))")
-      .order("created_at", { ascending: false });
-    setDistributions((data as DistributionWithInvoices[] | null) ?? []);
+    const res = await fetch("/api/distributions");
+    const data = await res.json();
+    setDistributions(data ?? []);
     setLoading(false);
   }, []);
 
   const fetchTransactions = useCallback(async (distributionId: string) => {
-    const { data } = await supabase
-      .from("transactions")
-      .select("*")
-      .eq("distribution_id", distributionId)
-      .order("created_at");
-    setTransactions((data as Transaction[] | null) ?? []);
+    const res = await fetch(`/api/transactions?distribution_id=${distributionId}`);
+    const data = await res.json();
+    setTransactions(data ?? []);
   }, []);
 
   useEffect(() => {
