@@ -31,9 +31,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, Download, FileDown, Merge, Building2, History, Inbox, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Download, FileDown, FileText, Merge, Building2, History, Inbox, Pencil, Trash2 } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePDF, type InvoicePDFData } from "@/lib/invoice-pdf";
+import { TaxCertificatePDF, type TaxCertificateData } from "@/lib/tax-certificate-pdf";
 
 interface DistributionWithInvoices extends Distribution {
   invoices: (Invoice & { employee: { name: string } })[];
@@ -164,8 +165,10 @@ export default function DistributionsPage() {
       "Rate Applied": inv.rate_applied,
       Threshold: inv.threshold_applied,
       "Gross PKR": inv.gross_pkr,
+      "Threshold Saving PKR": inv.salary_usd * inv.threshold_applied,
       "Contractor Tax PKR": inv.contractor_tax_pkr,
       "Remittance Tax PKR": inv.remittance_tax_pkr,
+      "Operational Cost PKR": Math.max(0, inv.total_tax_pkr - inv.contractor_tax_pkr - inv.remittance_tax_pkr),
       "Total Tax PKR": inv.total_tax_pkr,
       "Net PKR": inv.net_pkr,
     }));
@@ -229,6 +232,83 @@ export default function DistributionsPage() {
     const link = document.createElement("a");
     link.href = url;
     link.download = `invoice_qaim_ali_combined_${dist.reference_month}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function buildTaxCertData(
+    dist: DistributionWithInvoices,
+    inv: Invoice & { employee: { name: string } }
+  ): TaxCertificateData {
+    return {
+      contractorName: inv.employee?.name ?? "Unknown",
+      month: formatMonth(dist.reference_month),
+      date: new Date(dist.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      grossPkr: inv.gross_pkr,
+      contractorTaxPercent: inv.contractor_tax_percent,
+      contractorTaxPkr: inv.contractor_tax_pkr,
+    };
+  }
+
+  async function handleDownloadTaxCert(
+    dist: DistributionWithInvoices,
+    inv: Invoice & { employee: { name: string } }
+  ) {
+    const data = buildTaxCertData(dist, inv);
+    const blob = await pdf(<TaxCertificatePDF data={data} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = (inv.employee?.name ?? "cert").toLowerCase().replace(/\s+/g, "_");
+    link.download = `tax_certificate_${safeName}_${dist.reference_month}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDownloadAllTaxCerts(dist: DistributionWithInvoices) {
+    for (const inv of dist.invoices) {
+      await handleDownloadTaxCert(dist, inv);
+    }
+  }
+
+  async function handleDownloadCombinedTaxCert(dist: DistributionWithInvoices) {
+    const qaimInv = dist.invoices.find((inv) =>
+      inv.employee?.name?.toLowerCase().includes("qaim")
+    );
+    const fitrusInv = dist.invoices.find((inv) =>
+      inv.employee?.name?.toLowerCase().includes("fitrus")
+    );
+
+    if (!qaimInv && !fitrusInv) return;
+
+    const invoicesToCombine = [qaimInv, fitrusInv].filter(Boolean) as (Invoice & { employee: { name: string } })[];
+
+    const totalGrossPkr = invoicesToCombine.reduce((s, inv) => s + inv.gross_pkr, 0);
+    const totalContractorTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.contractor_tax_pkr, 0);
+    const contractorPct = totalGrossPkr > 0 ? (totalContractorTaxPkr / totalGrossPkr) * 100 : 0;
+
+    const data: TaxCertificateData = {
+      contractorName: "Qaim Ali",
+      month: formatMonth(dist.reference_month),
+      date: new Date(dist.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      grossPkr: totalGrossPkr,
+      contractorTaxPercent: Math.round(contractorPct * 100) / 100,
+      contractorTaxPkr: totalContractorTaxPkr,
+    };
+
+    const blob = await pdf(<TaxCertificatePDF data={data} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tax_certificate_qaim_ali_combined_${dist.reference_month}.pdf`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -354,6 +434,65 @@ export default function DistributionsPage() {
                       </div>
                     </div>
 
+                    {/* Fund flow summary */}
+                    {(() => {
+                      const received = dist.amount_received_pkr;
+                      const employeeNet = dist.invoices.reduce((s, inv) => s + inv.net_pkr, 0);
+                      const contractorTax = dist.invoices.reduce((s, inv) => s + inv.contractor_tax_pkr, 0);
+                      const companyRetained = received - employeeNet - contractorTax;
+                      const pctEmp = (employeeNet / received) * 100;
+                      const pctTax = (contractorTax / received) * 100;
+                      const pctCompany = (companyRetained / received) * 100;
+
+                      return (
+                    <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-4 mb-6">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-3">Fund Flow</p>
+                      <div className="flex justify-between text-sm font-medium mb-3">
+                        <span className="text-muted-foreground">Amount Received</span>
+                        <span className="font-mono tabular-nums">{formatPKR(received)}</span>
+                      </div>
+                      {/* Visual bar */}
+                      <div className="flex h-3 rounded-full overflow-hidden mb-3">
+                        <div className="bg-emerald-500/80" style={{ width: `${pctEmp}%` }} title={`Employee Payouts: ${pctEmp.toFixed(1)}%`} />
+                        <div className="bg-red-400/80" style={{ width: `${pctTax}%` }} title={`Contractor Tax: ${pctTax.toFixed(1)}%`} />
+                        <div className="bg-blue-500/80" style={{ width: `${pctCompany}%` }} title={`Company: ${pctCompany.toFixed(1)}%`} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <span className="size-2.5 rounded-full bg-emerald-500/80 inline-block" />
+                            <span className="text-muted-foreground">Employee Payouts</span>
+                          </span>
+                          <span className="flex items-center gap-3">
+                            <span className="font-mono tabular-nums text-emerald-400">{formatPKR(employeeNet)}</span>
+                            <span className="text-[11px] text-muted-foreground/60 w-12 text-right">{pctEmp.toFixed(1)}%</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <span className="size-2.5 rounded-full bg-red-400/80 inline-block" />
+                            <span className="text-muted-foreground">Contractor Tax (FBR)</span>
+                          </span>
+                          <span className="flex items-center gap-3">
+                            <span className="font-mono tabular-nums text-red-400">{formatPKR(contractorTax)}</span>
+                            <span className="text-[11px] text-muted-foreground/60 w-12 text-right">{pctTax.toFixed(1)}%</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <span className="size-2.5 rounded-full bg-blue-500/80 inline-block" />
+                            <span className="text-muted-foreground">Company Retained</span>
+                          </span>
+                          <span className="flex items-center gap-3">
+                            <span className="font-mono tabular-nums text-blue-400">{formatPKR(companyRetained)}</span>
+                            <span className="text-[11px] text-muted-foreground/60 w-12 text-right">{pctCompany.toFixed(1)}%</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                      );
+                    })()}
+
                     {/* Invoices */}
                     <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Invoices</p>
@@ -369,10 +508,26 @@ export default function DistributionsPage() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleDownloadCombinedTaxCert(dist)}
+                        >
+                          <FileText className="size-3.5 mr-1.5" />
+                          Combined Tax Cert
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleDownloadAllPDFs(dist)}
                         >
                           <Download className="size-3.5 mr-1.5" />
                           All PDFs
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadAllTaxCerts(dist)}
+                        >
+                          <FileText className="size-3.5 mr-1.5" />
+                          All Tax Certs
                         </Button>
                         <Button
                           variant="outline"
@@ -385,6 +540,25 @@ export default function DistributionsPage() {
                       </div>
                     </div>
                     <div className="overflow-x-auto">
+                    {(() => {
+                      // Compute derived per-invoice values and totals
+                      const invoiceData = dist.invoices.map((inv) => {
+                        const thresholdSaving = inv.salary_usd * inv.threshold_applied;
+                        const operationalCost = inv.total_tax_pkr - inv.contractor_tax_pkr - inv.remittance_tax_pkr;
+                        return { ...inv, thresholdSaving, operationalCost: Math.max(0, operationalCost) };
+                      });
+                      const totals = {
+                        usd: invoiceData.reduce((s, i) => s + i.salary_usd, 0),
+                        gross: invoiceData.reduce((s, i) => s + i.gross_pkr, 0),
+                        thresholdSaving: invoiceData.reduce((s, i) => s + i.thresholdSaving, 0),
+                        contractorTax: invoiceData.reduce((s, i) => s + i.contractor_tax_pkr, 0),
+                        remittanceTax: invoiceData.reduce((s, i) => s + i.remittance_tax_pkr, 0),
+                        opCost: invoiceData.reduce((s, i) => s + i.operationalCost, 0),
+                        totalTax: invoiceData.reduce((s, i) => s + i.total_tax_pkr, 0),
+                        net: invoiceData.reduce((s, i) => s + i.net_pkr, 0),
+                      };
+
+                      return (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -392,13 +566,17 @@ export default function DistributionsPage() {
                           <TableHead className="text-right hidden sm:table-cell">USD</TableHead>
                           <TableHead className="text-right hidden md:table-cell">Rate</TableHead>
                           <TableHead className="text-right hidden md:table-cell">Gross PKR</TableHead>
-                          <TableHead className="text-right hidden sm:table-cell">Tax PKR</TableHead>
+                          <TableHead className="text-right hidden lg:table-cell">Threshold Saving</TableHead>
+                          <TableHead className="text-right hidden md:table-cell">Contractor Tax</TableHead>
+                          <TableHead className="text-right hidden md:table-cell">Remittance Tax</TableHead>
+                          <TableHead className="text-right hidden md:table-cell">Op. Cost</TableHead>
+                          <TableHead className="text-right hidden sm:table-cell">Total Tax</TableHead>
                           <TableHead className="text-right">Net PKR</TableHead>
                           <TableHead className="w-10"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {dist.invoices.map((inv) => (
+                        {invoiceData.map((inv) => (
                           <TableRow key={inv.id} className="transition-all duration-200">
                             <TableCell className="font-medium">
                               {inv.employee?.name ?? "Unknown"}
@@ -412,6 +590,18 @@ export default function DistributionsPage() {
                             <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
                               {formatPKR(inv.gross_pkr)}
                             </TableCell>
+                            <TableCell className="text-right font-mono tabular-nums text-red-400 hidden lg:table-cell">
+                              {formatPKR(inv.thresholdSaving)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                              {formatPKR(inv.contractor_tax_pkr)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                              {formatPKR(inv.remittance_tax_pkr)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                              {formatPKR(inv.operationalCost)}
+                            </TableCell>
                             <TableCell className="text-right font-mono tabular-nums text-red-400 hidden sm:table-cell">
                               {formatPKR(inv.total_tax_pkr)}
                             </TableCell>
@@ -419,40 +609,116 @@ export default function DistributionsPage() {
                               {formatPKR(inv.net_pkr)}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                onClick={() => handleDownloadPDF(dist, inv)}
-                                title="Download PDF"
-                              >
-                                <Download className="size-3.5" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleDownloadPDF(dist, inv)}
+                                  title="Download Invoice"
+                                >
+                                  <Download className="size-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() => handleDownloadTaxCert(dist, inv)}
+                                  title="Download Tax Certificate"
+                                >
+                                  <FileText className="size-3.5" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
+                        {/* Totals row */}
+                        <TableRow className="border-t-2 border-border/50 font-semibold bg-muted/10">
+                          <TableCell>TOTAL</TableCell>
+                          <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
+                            {formatUSD(totals.usd)}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell" />
+                          <TableCell className="text-right font-mono tabular-nums hidden md:table-cell">
+                            {formatPKR(totals.gross)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums text-red-400 hidden lg:table-cell">
+                            {formatPKR(totals.thresholdSaving)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                            {formatPKR(totals.contractorTax)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                            {formatPKR(totals.remittanceTax)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums text-red-400 hidden md:table-cell">
+                            {formatPKR(totals.opCost)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums text-red-400 hidden sm:table-cell">
+                            {formatPKR(totals.totalTax)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums text-emerald-400 whitespace-nowrap">
+                            {formatPKR(totals.net)}
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
                       </TableBody>
                     </Table>
+                      );
+                    })()}
                     </div>
 
-                    {/* Company share */}
-                    <div className="rounded-xl bg-muted/20 px-4 py-3 mt-5">
-                      <div className="flex items-center gap-2 mb-3">
+                    {/* Company share breakdown */}
+                    {(() => {
+                      const companyUsd = dist.total_usd - dist.distribute_usd;
+                      const grossFromUsd = companyUsd * dist.base_rate;
+                      const thresholdSavings = dist.invoices.reduce(
+                        (s, inv) => s + inv.salary_usd * inv.threshold_applied, 0
+                      );
+                      const operationalCost = dist.invoices.reduce(
+                        (s, inv) => s + Math.max(0, inv.total_tax_pkr - inv.contractor_tax_pkr - inv.remittance_tax_pkr), 0
+                      );
+                      const totalBeforeTax = dist.company_gross_pkr ?? 0;
+                      const remittanceTax = totalBeforeTax - (dist.company_net_pkr ?? 0);
+                      const companyNet = dist.company_net_pkr ?? 0;
+
+                      return (
+                    <div className="rounded-xl bg-muted/20 px-4 py-4 mt-5">
+                      <div className="flex items-center gap-2 mb-4">
                         <Building2 className="size-3.5 text-muted-foreground/50" />
-                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Company Share</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">Company Share (Kontemplay)</p>
                       </div>
-                      <div className="grid grid-cols-2 gap-5 sm:grid-cols-3">
-                        <div>
-                          <p className="text-[13px] text-muted-foreground mb-0.5">Gross</p>
-                          <p className="font-mono tabular-nums font-medium text-sm">{formatPKR(dist.company_gross_pkr ?? 0)}</p>
+                      <div className="space-y-2 max-w-md">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">USD Share</span>
+                          <span className="font-mono tabular-nums font-medium">{formatUSD(companyUsd)}</span>
                         </div>
-                        <div>
-                          <p className="text-[13px] text-muted-foreground mb-0.5">Net</p>
-                          <p className="font-mono tabular-nums font-medium text-sm text-emerald-400">
-                            {formatPKR(dist.company_net_pkr ?? 0)}
-                          </p>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Gross from USD (base rate)</span>
+                          <span className="font-mono tabular-nums font-medium">{formatPKR(grossFromUsd)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Threshold Savings</span>
+                          <span className="font-mono tabular-nums font-medium text-emerald-400">{formatPKR(thresholdSavings)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Operational Cost (1.5%)</span>
+                          <span className="font-mono tabular-nums font-medium text-emerald-400">{formatPKR(operationalCost)}</span>
+                        </div>
+                        <div className="border-t border-border/30 pt-2 flex justify-between text-sm">
+                          <span className="text-muted-foreground">Total before tax</span>
+                          <span className="font-mono tabular-nums font-medium">{formatPKR(totalBeforeTax)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Remittance tax ({formatNumber(dist.remittance_tax_percent)}%)</span>
+                          <span className="font-mono tabular-nums font-medium text-red-400">-{formatPKR(remittanceTax)}</span>
+                        </div>
+                        <div className="border-t border-border/30 pt-2 flex justify-between text-sm font-semibold">
+                          <span>Company Net</span>
+                          <span className="font-mono tabular-nums text-emerald-400">{formatPKR(companyNet)}</span>
                         </div>
                       </div>
                     </div>
+                      );
+                    })()}
 
                     {/* Linked transactions */}
                     {transactions.length > 0 && (
