@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { calculateRates, calculateDistribution } from "@/lib/distribution";
-import type { Employee, EmployeeDistInput, DistributionResult } from "@/lib/types";
+import type { Employee, EmployeeDistInput, DistributionResult, ClientInvoice } from "@/lib/types";
 import { formatPKR, formatNumber } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,35 @@ export default function DistributePage() {
     }
     load();
   }, []);
+
+  // Auto-populate Total USD and Fitrus salary from client invoice when month changes
+  useEffect(() => {
+    if (!referenceMonth) return;
+    async function fetchInvoice() {
+      const res = await fetch("/api/client-invoices");
+      const invoices: ClientInvoice[] = await res.json();
+      const match = invoices.find((inv) => inv.invoice_month === referenceMonth);
+      if (!match) return;
+
+      setTotalUsd(String(match.total));
+
+      // Find "YAU Email Templates" line item for Fitrus's dynamic salary
+      const emailItem = match.line_items.find((item) =>
+        item.description.toLowerCase().includes("email template")
+      );
+      if (emailItem) {
+        const fitrusSalary = emailItem.quantity * emailItem.rate;
+        setEmployees((prev) =>
+          prev.map((emp) =>
+            emp.name.toLowerCase().includes("fitrus")
+              ? { ...emp, salary_usd: fitrusSalary }
+              : emp
+          )
+        );
+      }
+    }
+    fetchInvoice();
+  }, [referenceMonth]);
 
   // Calculate rates when inputs change
   useEffect(() => {
