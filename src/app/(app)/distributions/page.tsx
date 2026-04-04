@@ -503,7 +503,7 @@ export default function DistributionsPage() {
                           onClick={() => handleDownloadCombinedPDF(dist)}
                         >
                           <Merge className="size-3.5 mr-1.5" />
-                          Combined PDF
+                          Qaim + Fitrus Invoice
                         </Button>
                         <Button
                           variant="outline"
@@ -511,7 +511,7 @@ export default function DistributionsPage() {
                           onClick={() => handleDownloadCombinedTaxCert(dist)}
                         >
                           <FileText className="size-3.5 mr-1.5" />
-                          Combined Tax Cert
+                          Qaim + Fitrus Tax Cert
                         </Button>
                         <Button
                           variant="outline"
