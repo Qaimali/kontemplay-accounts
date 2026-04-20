@@ -81,8 +81,16 @@ const styles = StyleSheet.create({
   },
 });
 
+export interface BankDetails {
+  title: string;
+  number: string;
+  iban: string;
+  bank: string;
+}
+
 export interface InvoicePDFData {
   employeeName: string;
+  bankDetails?: BankDetails;
   month: string;
   date: string;
   salaryUsd: number;
@@ -117,6 +125,34 @@ export function InvoicePDF({ data }: { data: InvoicePDFData }) {
           <Text style={styles.payToLabel}>Pay To: </Text>
           {data.employeeName}
         </Text>
+        {data.bankDetails && (data.bankDetails.title || data.bankDetails.number) && (
+          <View style={{ marginBottom: 20, fontSize: 10 }}>
+            {data.bankDetails.title ? (
+              <Text style={{ marginBottom: 2 }}>
+                <Text style={styles.payToLabel}>Account Title: </Text>
+                {data.bankDetails.title}
+              </Text>
+            ) : null}
+            {data.bankDetails.number ? (
+              <Text style={{ marginBottom: 2 }}>
+                <Text style={styles.payToLabel}>Account No: </Text>
+                {data.bankDetails.number}
+              </Text>
+            ) : null}
+            {data.bankDetails.iban ? (
+              <Text style={{ marginBottom: 2 }}>
+                <Text style={styles.payToLabel}>IBAN: </Text>
+                {data.bankDetails.iban}
+              </Text>
+            ) : null}
+            {data.bankDetails.bank ? (
+              <Text>
+                <Text style={styles.payToLabel}>Bank: </Text>
+                {data.bankDetails.bank}
+              </Text>
+            ) : null}
+          </View>
+        )}
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>

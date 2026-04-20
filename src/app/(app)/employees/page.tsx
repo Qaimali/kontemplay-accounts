@@ -28,13 +28,20 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Printer, Trash2, Users, FileText, Banknote } from "lucide-react";
+import { ChevronDown, Printer, Trash2, Users, FileText, Banknote, Download, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { pdf } from "@react-pdf/renderer";
+import { InvoicePDF, type InvoicePDFData } from "@/lib/invoice-pdf";
+import { TaxCertificatePDF, type TaxCertificateData } from "@/lib/tax-certificate-pdf";
 import { deleteInvoiceAction } from "./actions";
 
 type EmployeeForm = {
   name: string;
   cnic: string;
+  bank_title: string;
+  bank_number: string;
+  bank_iban: string;
+  bank_name: string;
   default_salary_usd: string;
   default_threshold: string;
   default_contractor_tax: string;
@@ -45,6 +52,10 @@ type EmployeeForm = {
 const emptyForm: EmployeeForm = {
   name: "",
   cnic: "",
+  bank_title: "",
+  bank_number: "",
+  bank_iban: "",
+  bank_name: "",
   default_salary_usd: "",
   default_threshold: "",
   default_contractor_tax: "",
@@ -52,10 +63,24 @@ const emptyForm: EmployeeForm = {
   is_active: true,
 };
 
+function parseBankAccount(raw: string | null): { title: string; number: string; iban: string; bank: string } {
+  if (!raw) return { title: "", number: "", iban: "", bank: "" };
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { title: "", number: "", iban: "", bank: raw };
+  }
+}
+
 function formFromEmployee(emp: Employee): EmployeeForm {
+  const bank = parseBankAccount(emp.bank_account);
   return {
     name: emp.name,
     cnic: emp.cnic ?? "",
+    bank_title: bank.title,
+    bank_number: bank.number,
+    bank_iban: bank.iban,
+    bank_name: bank.bank,
     default_salary_usd: String(emp.default_salary_usd),
     default_threshold: String(emp.default_threshold),
     default_contractor_tax: String(emp.default_contractor_tax),
@@ -63,6 +88,30 @@ function formFromEmployee(emp: Employee): EmployeeForm {
     is_active: emp.is_active,
   };
 }
+
+type DirectInvoiceForm = {
+  currency: "usd" | "pkr";
+  amount_usd: string;
+  rate: string;
+  amount_pkr: string;
+  contractor_tax_pct: string;
+  remittance_tax_pct: string;
+  operational_cost_pct: string;
+  description: string;
+  reference_month: string;
+};
+
+const emptyDIForm: DirectInvoiceForm = {
+  currency: "usd",
+  amount_usd: "",
+  rate: "",
+  amount_pkr: "",
+  contractor_tax_pct: "0",
+  remittance_tax_pct: "0",
+  operational_cost_pct: "0",
+  description: "",
+  reference_month: "",
+};
 
 type InvoiceWithMonth = Invoice & { reference_month: string };
 
@@ -114,6 +163,12 @@ export default function EmployeesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<EmployeeForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  // Direct invoice dialog
+  const [diOpen, setDiOpen] = useState(false);
+  const [diEmp, setDiEmp] = useState<Employee | null>(null);
+  const [diForm, setDiForm] = useState<DirectInvoiceForm>(emptyDIForm);
+  const [diSaving, setDiSaving] = useState(false);
 
   // Invoice expansion
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -181,6 +236,9 @@ export default function EmployeesPage() {
     const payload = {
       name: form.name.trim(),
       cnic: form.cnic.trim() || null,
+      bank_account: (form.bank_title || form.bank_number || form.bank_iban || form.bank_name)
+        ? JSON.stringify({ title: form.bank_title.trim(), number: form.bank_number.trim(), iban: form.bank_iban.trim(), bank: form.bank_name.trim() })
+        : null,
       default_salary_usd: parseFloat(form.default_salary_usd) || 0,
       default_threshold: parseFloat(form.default_threshold) || 0,
       default_contractor_tax: parseFloat(form.default_contractor_tax) || 0,
@@ -236,6 +294,144 @@ export default function EmployeesPage() {
     if (expandedId) fetchInvoices(expandedId);
   }
 
+  // Direct invoice
+  function openDirectInvoice(emp: Employee) {
+    setDiEmp(emp);
+    setDiForm({
+      currency: "usd",
+      amount_usd: "",
+      rate: "",
+      amount_pkr: "",
+      contractor_tax_pct: String(emp.default_contractor_tax),
+      remittance_tax_pct: String(emp.default_remittance_tax),
+      operational_cost_pct: "0",
+      description: "",
+      reference_month: "",
+    });
+    setDiOpen(true);
+  }
+
+  function updateDIField(field: keyof DirectInvoiceForm, value: string) {
+    setDiForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  const diCalc = useMemo(() => {
+    const amountUsd = parseFloat(diForm.amount_usd) || 0;
+    const rate = parseFloat(diForm.rate) || 0;
+    const amountPkr = parseFloat(diForm.amount_pkr) || 0;
+    const grossPkr = diForm.currency === "usd" ? amountUsd * rate : amountPkr;
+    const contractorTaxPct = parseFloat(diForm.contractor_tax_pct) || 0;
+    const remittanceTaxPct = parseFloat(diForm.remittance_tax_pct) || 0;
+    const opCostPct = parseFloat(diForm.operational_cost_pct) || 0;
+    const contractorTaxPkr = grossPkr * contractorTaxPct / 100;
+    const remittanceTaxPkr = grossPkr * remittanceTaxPct / 100;
+    const opCostPkr = grossPkr * opCostPct / 100;
+    const totalTaxPkr = contractorTaxPkr + remittanceTaxPkr + opCostPkr;
+    const netPkr = grossPkr - totalTaxPkr;
+    return { grossPkr, contractorTaxPkr, remittanceTaxPkr, opCostPkr, totalTaxPkr, netPkr };
+  }, [diForm]);
+
+  async function handleSaveDirectInvoice() {
+    if (!diEmp) return;
+    setDiSaving(true);
+
+    const salaryUsd = diForm.currency === "usd" ? (parseFloat(diForm.amount_usd) || 0) : 0;
+    const rateApplied = diForm.currency === "usd" ? (parseFloat(diForm.rate) || 0) : 0;
+
+    const res = await fetch(`/api/employees/${diEmp.id}/direct-invoice`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        salary_usd: salaryUsd,
+        rate_applied: rateApplied,
+        gross_pkr: diCalc.grossPkr,
+        contractor_tax_percent: parseFloat(diForm.contractor_tax_pct) || 0,
+        contractor_tax_pkr: diCalc.contractorTaxPkr,
+        remittance_tax_percent: parseFloat(diForm.remittance_tax_pct) || 0,
+        remittance_tax_pkr: diCalc.remittanceTaxPkr,
+        total_tax_pkr: diCalc.totalTaxPkr,
+        net_pkr: diCalc.netPkr,
+        reference_month: diForm.reference_month || null,
+        description: diForm.description || null,
+      }),
+    });
+
+    setDiSaving(false);
+    if (res.ok) {
+      setDiOpen(false);
+      toast.success("Direct invoice created");
+      if (expandedId === diEmp.id) fetchInvoices(diEmp.id);
+    } else {
+      toast.error("Failed to create direct invoice");
+    }
+  }
+
+  // PDF downloads
+  function buildInvPDFData(inv: InvoiceWithMonth, emp: Employee): InvoicePDFData {
+    const opCostPkr = Math.max(0, inv.total_tax_pkr - inv.contractor_tax_pkr - inv.remittance_tax_pkr);
+    const opCostPct = inv.gross_pkr > 0 ? (opCostPkr / inv.gross_pkr) * 100 : 0;
+    const totalTaxPct = inv.gross_pkr > 0 ? (inv.total_tax_pkr / inv.gross_pkr) * 100 : 0;
+
+    return {
+      employeeName: emp.name,
+      bankDetails: emp.bank_account ? parseBankAccount(emp.bank_account) : undefined,
+      month: inv.reference_month ? formatMonth(inv.reference_month) : "N/A",
+      date: new Date(inv.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      salaryUsd: inv.salary_usd,
+      exchangeRate: inv.rate_applied,
+      grossPkr: inv.gross_pkr,
+      remittanceTaxPercent: inv.remittance_tax_percent,
+      remittanceTaxPkr: inv.remittance_tax_pkr,
+      contractorTaxPercent: inv.contractor_tax_percent,
+      contractorTaxPkr: inv.contractor_tax_pkr,
+      operationalCostPercent: Math.round(opCostPct * 100) / 100,
+      operationalCostPkr: opCostPkr,
+      totalTaxPercent: Math.round(totalTaxPct * 100) / 100,
+      totalTaxPkr: inv.total_tax_pkr,
+      netPkr: inv.net_pkr,
+    };
+  }
+
+  async function handleDownloadInvoicePDF(inv: InvoiceWithMonth, emp: Employee) {
+    const data = buildInvPDFData(inv, emp);
+    const blob = await pdf(<InvoicePDF data={data} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = emp.name.toLowerCase().replace(/\s+/g, "_");
+    link.download = `invoice_${safeName}_${inv.reference_month ?? "direct"}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDownloadTaxCert(inv: InvoiceWithMonth, emp: Employee) {
+    const data: TaxCertificateData = {
+      contractorName: emp.name,
+      cnic: emp.cnic ?? undefined,
+      month: inv.reference_month ? formatMonth(inv.reference_month) : "N/A",
+      date: new Date(inv.created_at).toLocaleDateString("en-US", {
+        month: "long",
+        day: "2-digit",
+        year: "numeric",
+      }),
+      grossPkr: inv.gross_pkr,
+      contractorTaxPercent: inv.contractor_tax_percent,
+      contractorTaxPkr: inv.contractor_tax_pkr,
+    };
+    const blob = await pdf(<TaxCertificatePDF data={data} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safeName = emp.name.toLowerCase().replace(/\s+/g, "_");
+    link.download = `tax_certificate_${safeName}_${inv.reference_month ?? "direct"}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   const totalEarned = useMemo(
     () =>
       invoices.reduce((s, inv) => s + inv.net_pkr, 0) +
@@ -282,6 +478,44 @@ export default function EmployeesPage() {
                 onChange={(e) => updateField("cnic", e.target.value)}
                 placeholder="XXXXX-XXXXXXX-X"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="bank_title" className="text-[13px]">Account Title</Label>
+                <Input
+                  id="bank_title"
+                  value={form.bank_title}
+                  onChange={(e) => updateField("bank_title", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_name" className="text-[13px]">Bank Name</Label>
+                <Input
+                  id="bank_name"
+                  value={form.bank_name}
+                  onChange={(e) => updateField("bank_name", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="bank_number" className="text-[13px]">Account Number</Label>
+                <Input
+                  id="bank_number"
+                  value={form.bank_number}
+                  onChange={(e) => updateField("bank_number", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_iban" className="text-[13px]">IBAN</Label>
+                <Input
+                  id="bank_iban"
+                  value={form.bank_iban}
+                  onChange={(e) => updateField("bank_iban", e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-5">
@@ -369,6 +603,184 @@ export default function EmployeesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Direct Invoice Dialog */}
+      <Dialog open={diOpen} onOpenChange={setDiOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Direct Invoice {diEmp ? `- ${diEmp.name}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSaveDirectInvoice();
+            }}
+            className="space-y-5"
+          >
+            {/* Currency toggle */}
+            <div className="space-y-2">
+              <Label className="text-[13px]">Currency</Label>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant={diForm.currency === "usd" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => updateDIField("currency", "usd")}
+                >
+                  USD
+                </Button>
+                <Button
+                  type="button"
+                  variant={diForm.currency === "pkr" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => updateDIField("currency", "pkr")}
+                >
+                  PKR
+                </Button>
+              </div>
+            </div>
+
+            {/* Amount fields */}
+            {diForm.currency === "usd" ? (
+              <div className="grid grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <Label htmlFor="di_usd" className="text-[13px]">Amount (USD)</Label>
+                  <Input
+                    id="di_usd"
+                    type="number"
+                    step="any"
+                    value={diForm.amount_usd}
+                    onChange={(e) => updateDIField("amount_usd", e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="di_rate" className="text-[13px]">Exchange Rate</Label>
+                  <Input
+                    id="di_rate"
+                    type="number"
+                    step="any"
+                    value={diForm.rate}
+                    onChange={(e) => updateDIField("rate", e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="di_pkr" className="text-[13px]">Amount (PKR)</Label>
+                <Input
+                  id="di_pkr"
+                  type="number"
+                  step="any"
+                  value={diForm.amount_pkr}
+                  onChange={(e) => updateDIField("amount_pkr", e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            {/* Tax fields */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="di_remittance" className="text-[13px]">Remittance Tax %</Label>
+                <Input
+                  id="di_remittance"
+                  type="number"
+                  step="any"
+                  value={diForm.remittance_tax_pct}
+                  onChange={(e) => updateDIField("remittance_tax_pct", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="di_contractor" className="text-[13px]">Contractor Tax %</Label>
+                <Input
+                  id="di_contractor"
+                  type="number"
+                  step="any"
+                  value={diForm.contractor_tax_pct}
+                  onChange={(e) => updateDIField("contractor_tax_pct", e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="di_opcost" className="text-[13px]">Op. Cost %</Label>
+                <Input
+                  id="di_opcost"
+                  type="number"
+                  step="any"
+                  value={diForm.operational_cost_pct}
+                  onChange={(e) => updateDIField("operational_cost_pct", e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Description & Month */}
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="di_desc" className="text-[13px]">Description</Label>
+                <Input
+                  id="di_desc"
+                  value={diForm.description}
+                  onChange={(e) => updateDIField("description", e.target.value)}
+                  placeholder="e.g. Designer 20-30Nov"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="di_month" className="text-[13px]">Reference Month</Label>
+                <Input
+                  id="di_month"
+                  type="month"
+                  value={diForm.reference_month}
+                  onChange={(e) => updateDIField("reference_month", e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Calculated summary */}
+            {diCalc.grossPkr > 0 && (
+              <div className="rounded-xl border border-border/40 bg-muted/10 px-4 py-3 space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Gross PKR</span>
+                  <span className="font-mono tabular-nums font-medium">{formatPKR(diCalc.grossPkr)}</span>
+                </div>
+                {diCalc.remittanceTaxPkr > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Remittance Tax</span>
+                    <span className="font-mono tabular-nums text-red-400">-{formatPKR(diCalc.remittanceTaxPkr)}</span>
+                  </div>
+                )}
+                {diCalc.contractorTaxPkr > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Contractor Tax</span>
+                    <span className="font-mono tabular-nums text-red-400">-{formatPKR(diCalc.contractorTaxPkr)}</span>
+                  </div>
+                )}
+                {diCalc.opCostPkr > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Op. Cost</span>
+                    <span className="font-mono tabular-nums text-red-400">-{formatPKR(diCalc.opCostPkr)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm font-semibold border-t border-border/30 pt-1.5">
+                  <span>Net Payable</span>
+                  <span className="font-mono tabular-nums text-emerald-400">{formatPKR(diCalc.netPkr)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setDiOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={diSaving || diCalc.grossPkr <= 0}>
+                {diSaving ? "Creating..." : "Create Invoice"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : employees.length === 0 ? (
@@ -434,9 +846,22 @@ export default function EmployeesPage() {
                 {/* Expanded invoice history */}
                 {isExpanded && (
                   <CardContent className="pt-0 border-t border-border/30">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60 mt-4 mb-3">
-                      Invoice History
-                    </p>
+                    <div className="flex items-center justify-between mt-4 mb-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                        Invoice History
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openDirectInvoice(emp);
+                        }}
+                      >
+                        <Plus className="size-3.5 mr-1.5" />
+                        Direct Invoice
+                      </Button>
+                    </div>
 
                     {loadingInvoices ? (
                       <p className="text-sm text-muted-foreground py-4">Loading invoices...</p>
@@ -496,6 +921,24 @@ export default function EmployeesPage() {
                                       className="transition-all duration-200"
                                     >
                                       <Printer className="size-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-xs"
+                                      onClick={() => handleDownloadInvoicePDF(inv, emp)}
+                                      title="Download Invoice PDF"
+                                      className="transition-all duration-200"
+                                    >
+                                      <Download className="size-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon-xs"
+                                      onClick={() => handleDownloadTaxCert(inv, emp)}
+                                      title="Download Tax Certificate"
+                                      className="transition-all duration-200"
+                                    >
+                                      <FileText className="size-3.5" />
                                     </Button>
                                     <Button
                                       variant="ghost"

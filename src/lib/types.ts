@@ -10,6 +10,7 @@ export interface Employee {
   id: string;
   name: string;
   cnic: string | null;
+  bank_account: string | null;
   default_salary_usd: number;
   default_threshold: number;
   default_contractor_tax: number;

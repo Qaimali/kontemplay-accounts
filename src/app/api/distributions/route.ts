@@ -13,7 +13,7 @@ export async function GET() {
   const result = [];
   for (const dist of dists) {
     const invoices = await query(
-      `SELECT i.*, e.name as employee_name
+      `SELECT i.*, e.name as employee_name, e.cnic as employee_cnic, e.bank_account as employee_bank_account
        FROM invoices i
        LEFT JOIN employees e ON e.id = i.employee_id
        WHERE i.distribution_id = ?`,
@@ -21,10 +21,13 @@ export async function GET() {
     );
     result.push({
       ...dist,
-      invoices: invoices.map(inv => ({
-        ...inv,
-        employee: { name: (inv as Record<string, unknown>).employee_name },
-      })),
+      invoices: invoices.map(inv => {
+        const r = inv as Record<string, unknown>;
+        return {
+          ...inv,
+          employee: { name: r.employee_name as string, cnic: r.employee_cnic as string | null, bank_account: r.employee_bank_account as string | null },
+        };
+      }),
     });
   }
 

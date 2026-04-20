@@ -33,11 +33,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, Download, FileDown, FileText, Merge, Building2, History, Inbox, Pencil, Trash2 } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
-import { InvoicePDF, type InvoicePDFData } from "@/lib/invoice-pdf";
+import { InvoicePDF, type InvoicePDFData, type BankDetails } from "@/lib/invoice-pdf";
 import { TaxCertificatePDF, type TaxCertificateData } from "@/lib/tax-certificate-pdf";
 
 interface DistributionWithInvoices extends Distribution {
-  invoices: (Invoice & { employee: { name: string } })[];
+  invoices: (Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } })[];
+}
+
+function parseBankJson(raw: string): BankDetails | undefined {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
 }
 
 export default function DistributionsPage() {
@@ -107,7 +115,7 @@ export default function DistributionsPage() {
 
   function buildInvoiceData(
     dist: DistributionWithInvoices,
-    inv: Invoice & { employee: { name: string } }
+    inv: Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } }
   ): InvoicePDFData {
     const operationalCostPkr = inv.total_tax_pkr - inv.contractor_tax_pkr - inv.remittance_tax_pkr;
     const operationalCostPercent = inv.gross_pkr > 0 ? (operationalCostPkr / inv.gross_pkr) * 100 : 0;
@@ -115,6 +123,7 @@ export default function DistributionsPage() {
 
     return {
       employeeName: inv.employee?.name ?? "Unknown",
+      bankDetails: inv.employee?.bank_account ? parseBankJson(inv.employee.bank_account) : undefined,
       month: formatMonth(dist.reference_month),
       date: new Date(dist.created_at).toLocaleDateString("en-US", {
         month: "long",
@@ -138,7 +147,7 @@ export default function DistributionsPage() {
 
   async function handleDownloadPDF(
     dist: DistributionWithInvoices,
-    inv: Invoice & { employee: { name: string } }
+    inv: Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } }
   ) {
     const data = buildInvoiceData(dist, inv);
     const blob = await pdf(<InvoicePDF data={data} />).toBlob();
@@ -186,7 +195,7 @@ export default function DistributionsPage() {
 
     if (!qaimInv && !fitrusInv) return;
 
-    const invoicesToCombine = [qaimInv, fitrusInv].filter(Boolean) as (Invoice & { employee: { name: string } })[];
+    const invoicesToCombine = [qaimInv, fitrusInv].filter(Boolean) as (Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } })[];
 
     const totalSalaryUsd = invoicesToCombine.reduce((s, inv) => s + inv.salary_usd, 0);
     const totalGrossPkr = invoicesToCombine.reduce((s, inv) => s + inv.gross_pkr, 0);
@@ -205,8 +214,10 @@ export default function DistributionsPage() {
     const opCostPct = totalGrossPkr > 0 ? (totalOpCostPkr / totalGrossPkr) * 100 : 0;
     const totalTaxPct = totalGrossPkr > 0 ? (totalTaxPkr / totalGrossPkr) * 100 : 0;
 
+    const qaimBank = qaimInv?.employee?.bank_account ? parseBankJson(qaimInv.employee.bank_account) : undefined;
     const data: InvoicePDFData = {
       employeeName: "Qaim Ali",
+      bankDetails: qaimBank,
       month: formatMonth(dist.reference_month),
       date: new Date(dist.created_at).toLocaleDateString("en-US", {
         month: "long",
@@ -238,10 +249,11 @@ export default function DistributionsPage() {
 
   function buildTaxCertData(
     dist: DistributionWithInvoices,
-    inv: Invoice & { employee: { name: string } }
+    inv: Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } }
   ): TaxCertificateData {
     return {
       contractorName: inv.employee?.name ?? "Unknown",
+      cnic: inv.employee?.cnic ?? undefined,
       month: formatMonth(dist.reference_month),
       date: new Date(dist.created_at).toLocaleDateString("en-US", {
         month: "long",
@@ -256,7 +268,7 @@ export default function DistributionsPage() {
 
   async function handleDownloadTaxCert(
     dist: DistributionWithInvoices,
-    inv: Invoice & { employee: { name: string } }
+    inv: Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } }
   ) {
     const data = buildTaxCertData(dist, inv);
     const blob = await pdf(<TaxCertificatePDF data={data} />).toBlob();
@@ -285,7 +297,7 @@ export default function DistributionsPage() {
 
     if (!qaimInv && !fitrusInv) return;
 
-    const invoicesToCombine = [qaimInv, fitrusInv].filter(Boolean) as (Invoice & { employee: { name: string } })[];
+    const invoicesToCombine = [qaimInv, fitrusInv].filter(Boolean) as (Invoice & { employee: { name: string; cnic?: string | null; bank_account?: string | null } })[];
 
     const totalGrossPkr = invoicesToCombine.reduce((s, inv) => s + inv.gross_pkr, 0);
     const totalContractorTaxPkr = invoicesToCombine.reduce((s, inv) => s + inv.contractor_tax_pkr, 0);
@@ -293,6 +305,7 @@ export default function DistributionsPage() {
 
     const data: TaxCertificateData = {
       contractorName: "Qaim Ali",
+      cnic: qaimInv?.employee?.cnic ?? undefined,
       month: formatMonth(dist.reference_month),
       date: new Date(dist.created_at).toLocaleDateString("en-US", {
         month: "long",

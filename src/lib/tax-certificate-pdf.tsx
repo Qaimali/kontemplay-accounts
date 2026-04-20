@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
 
 export interface TaxCertificateData {
   contractorName: string;
+  cnic?: string;
   date: string;
   month: string;
   grossPkr: number;
@@ -108,6 +109,12 @@ export function TaxCertificatePDF({ data }: { data: TaxCertificateData }) {
           <Text style={styles.contractorLabel}>Contractor: </Text>
           {data.contractorName}
         </Text>
+        {data.cnic && (
+          <Text style={styles.contractor}>
+            <Text style={styles.contractorLabel}>CNIC: </Text>
+            {data.cnic}
+          </Text>
+        )}
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>

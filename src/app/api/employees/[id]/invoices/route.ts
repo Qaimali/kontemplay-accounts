@@ -6,9 +6,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   await requireAuth();
   const { id } = await params;
   const rows = await query(
-    `SELECT i.*, d.reference_month
+    `SELECT i.*, COALESCE(d.reference_month, (
+       SELECT t.reference_month FROM transactions t
+       WHERE t.invoice_id = i.id AND t.reference_month IS NOT NULL
+       LIMIT 1
+     )) as reference_month
      FROM invoices i
-     JOIN distributions d ON d.id = i.distribution_id
+     LEFT JOIN distributions d ON d.id = i.distribution_id
      WHERE i.employee_id = ?
      ORDER BY i.created_at DESC`,
     [id]
