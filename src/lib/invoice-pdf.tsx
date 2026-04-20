@@ -90,6 +90,7 @@ export interface BankDetails {
 
 export interface InvoicePDFData {
   employeeName: string;
+  cnic?: string;
   bankDetails?: BankDetails;
   month: string;
   date: string;
@@ -125,6 +126,12 @@ export function InvoicePDF({ data }: { data: InvoicePDFData }) {
           <Text style={styles.payToLabel}>Pay To: </Text>
           {data.employeeName}
         </Text>
+        {data.cnic && (
+          <Text style={styles.payTo}>
+            <Text style={styles.payToLabel}>CNIC: </Text>
+            {data.cnic}
+          </Text>
+        )}
         {data.bankDetails && (data.bankDetails.title || data.bankDetails.number) && (
           <View style={{ marginBottom: 20, fontSize: 10 }}>
             {data.bankDetails.title ? (

@@ -374,6 +374,7 @@ export default function EmployeesPage() {
 
     return {
       employeeName: emp.name,
+      cnic: emp.cnic ?? undefined,
       bankDetails: emp.bank_account ? parseBankAccount(emp.bank_account) : undefined,
       month: inv.reference_month ? formatMonth(inv.reference_month) : "N/A",
       date: new Date(inv.created_at).toLocaleDateString("en-US", {

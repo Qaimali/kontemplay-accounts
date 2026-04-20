@@ -123,6 +123,7 @@ export default function DistributionsPage() {
 
     return {
       employeeName: inv.employee?.name ?? "Unknown",
+      cnic: inv.employee?.cnic ?? undefined,
       bankDetails: inv.employee?.bank_account ? parseBankJson(inv.employee.bank_account) : undefined,
       month: formatMonth(dist.reference_month),
       date: new Date(dist.created_at).toLocaleDateString("en-US", {
@@ -217,6 +218,7 @@ export default function DistributionsPage() {
     const qaimBank = qaimInv?.employee?.bank_account ? parseBankJson(qaimInv.employee.bank_account) : undefined;
     const data: InvoicePDFData = {
       employeeName: "Qaim Ali",
+      cnic: qaimInv?.employee?.cnic ?? undefined,
       bankDetails: qaimBank,
       month: formatMonth(dist.reference_month),
       date: new Date(dist.created_at).toLocaleDateString("en-US", {
