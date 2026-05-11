@@ -33,6 +33,7 @@ import {
   Building2,
   Banknote,
 } from "lucide-react";
+import { Tip } from "@/components/ui/tip";
 
 type Step = "input" | "employees" | "preview" | "done";
 
@@ -335,7 +336,7 @@ export default function DistributePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[13px]">Amount Received (PKR)</Label>
+                <Label className="text-[13px]">Amount Received (PKR)<Tip text="The PKR amount that actually landed in your bank account — already after the bank deducted its remittance fee. The system will reverse-calculate the original (pre-fee) amount." /></Label>
                 <Input
                   type="number"
                   value={amountReceived}
@@ -344,7 +345,7 @@ export default function DistributePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[13px]">Bank Remittance Tax (%)</Label>
+                <Label className="text-[13px]">Bank Remittance Tax (%)<Tip text="The percentage the bank deducted as a fee before depositing the PKR. Used to reverse-calculate the original amount.\n\nExample: if 0.25%, and you received 334,800 PKR, the original was 334,800 × 1.0025 = 335,637 PKR." /></Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -353,7 +354,7 @@ export default function DistributePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[13px]">Total USD</Label>
+                <Label className="text-[13px]">Total USD<Tip text="The total USD amount on the client invoice. This is used with the original PKR amount to calculate the base exchange rate (PKR per USD)." /></Label>
                 <Input
                   type="number"
                   value={totalUsd}
@@ -362,7 +363,7 @@ export default function DistributePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[13px]">Default Threshold (PKR/USD)</Label>
+                <Label className="text-[13px]">Default Threshold (PKR/USD)<Tip text="PKR per USD deducted from the base rate before paying employees. This gap is kept by the company as margin.\n\nExample: base rate 279.70, threshold 2 → employees get paid at 277.70 PKR/USD. The 2 PKR/USD goes to the company." /></Label>
                 <Input
                   type="number"
                   value={threshold}
@@ -370,7 +371,7 @@ export default function DistributePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[13px]">Operational Cost (%)</Label>
+                <Label className="text-[13px]">Operational Cost (%)<Tip text="A percentage deducted from each employee's gross PKR and transferred to the company. This is an internal transfer, not a government tax.\n\nExample: 1.5% of 277,700 gross = 4,166 PKR moved to the company." /></Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -387,15 +388,15 @@ export default function DistributePage() {
                 </p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <div>
-                    <span className="text-[13px] text-muted-foreground">Original Amount</span>
+                    <span className="text-[13px] text-muted-foreground">Original Amount<Tip text="The full PKR amount before the bank took its remittance fee. Calculated as: Amount Received × (1 + Bank Tax %)." /></span>
                     <p className="font-mono tabular-nums font-semibold mt-0.5">{formatPKR(rates.original_amount)}</p>
                   </div>
                   <div>
-                    <span className="text-[13px] text-muted-foreground">Base Rate</span>
+                    <span className="text-[13px] text-muted-foreground">Base Rate<Tip text="The true exchange rate: Original Amount / Total USD. This is the rate before any threshold is applied." /></span>
                     <p className="font-mono tabular-nums font-semibold mt-0.5">{formatNumber(rates.base_rate, 4)} PKR/USD</p>
                   </div>
                   <div>
-                    <span className="text-[13px] text-muted-foreground">Effective Rate</span>
+                    <span className="text-[13px] text-muted-foreground">Effective Rate<Tip text="The rate employees are paid at: Base Rate minus Threshold. The threshold difference is kept by the company as margin." /></span>
                     <p className="font-mono tabular-nums font-semibold mt-0.5">{formatNumber(rates.effective_rate, 4)} PKR/USD</p>
                   </div>
                 </div>
