@@ -224,8 +224,8 @@ export function OwnerLiabilities({
                 <div>
                   <span className="text-sm font-medium">{r.name}</span>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Withdrew {formatPKR(r.withdrawn)} \u2022 Distributed {formatPKR(r.distributed)}
-                    {r.returned > 0 ? ` \u2022 Returned ${formatPKR(r.returned)}` : ""}
+                    Withdrew {formatPKR(r.withdrawn)} • Distributed {formatPKR(r.distributed)}
+                    {r.returned > 0 ? ` • Returned ${formatPKR(r.returned)}` : ""}
                   </p>
                 </div>
                 <span className="font-mono text-sm font-semibold tabular-nums text-amber-400">
