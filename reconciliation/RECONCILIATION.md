@@ -697,3 +697,238 @@ The amber `[Owner Withdrawal]` badge makes it immediately obvious: "this is when
 8. Insert 3 withdrawal entries                     (SQL inserts)
 9. When Sanan returns money → insert return entry
 ```
+
+---
+
+# Phase 6: Fix Double-Counting — Add Transaction Flags
+
+**Date:** May 20, 2026
+**Problem identified from dashboard:**
+
+## The Double-Counting Problem
+
+**Total In shows:** Rs 13,977,040 (client payments + owner investments)
+**Total Out shows:** Rs 22,342,287 (salary + tax + expenses + repayments + **withdrawals**)
+
+Total Out is inflated by Rs 9,500,000 because `owner_withdrawal` entries are counted alongside the `salary_payout` and `contractor_tax` entries they funded. The same money is recorded twice:
+
+1. `owner_withdrawal` (Rs 9,500,000) — money leaving the bank to Sanan
+2. `salary_payout` + `contractor_tax` for Jan-Mar (Rs 8,715,612) — what Sanan distributed from that money
+
+**Root cause:** `owner_withdrawal` is a **transfer** (bank → Sanan's account), not an expense. The real expenses are the salary/tax distributions. But both are recorded as debits (`is_credit = 0`), causing double-counting in any "sum all debits" calculation.
+
+## What Each Transaction Should Mean
+
+| Type | Nature | Source | Counted in Total Out? |
+|------|--------|--------|----------------------|
+| `salary_payout` (Dec) | Expense | Company bank | Yes |
+| `salary_payout` (Jan-Mar) | Expense | Sanan's withdrawal | Yes |
+| `contractor_tax` (Dec) | Expense | Sanan's pocket | Yes |
+| `contractor_tax` (Jan-Mar) | Expense | Sanan's withdrawal | Yes |
+| `contractor_tax` (Mar bank) | Expense | Company bank | Yes |
+| `expense` | Expense | Owner pocket | Yes |
+| `owner_repayment` | Expense | Company bank | Yes |
+| `owner_withdrawal` | **Transfer** | Company bank → Sanan | **No** |
+| `owner_return` | **Transfer** | Sanan → Company bank | **No** |
+| `owner_investment` | **Transfer** | Owner pocket → Company | **No (from Total Out)** |
+
+## DB Changes: Add `source` and `is_transfer` columns
+
+### New columns on `transactions` table
+
+```sql
+ALTER TABLE transactions ADD COLUMN source TEXT DEFAULT 'bank';
+-- Values: 'bank', 'owner_pocket', 'owner_withdrawal'
+-- Tracks WHERE the money came from / went to
+
+ALTER TABLE transactions ADD COLUMN is_transfer INTEGER DEFAULT 0;
+-- 0 = operational transaction (expense or revenue)
+-- 1 = transfer between accounts (withdrawal, return, investment)
+-- Used for Total In / Total Out: exclude transfers
+```
+
+### Update existing transactions
+
+```sql
+-- 1. Mark all owner_withdrawal as transfers, source = bank (money left the bank)
+UPDATE transactions SET is_transfer = 1, source = 'bank'
+WHERE type = 'owner_withdrawal';
+
+-- 2. Mark all owner_return as transfers, source = bank (money returns to bank)
+UPDATE transactions SET is_transfer = 1, source = 'bank'
+WHERE type = 'owner_return';
+
+-- 3. Mark all owner_investment as transfers, source = owner_pocket
+UPDATE transactions SET is_transfer = 1, source = 'owner_pocket'
+WHERE type = 'owner_investment';
+
+-- 4. Mark all expense entries as source = owner_pocket
+--    (expenses were paid from owner pockets, matched by investments)
+UPDATE transactions SET source = 'owner_pocket'
+WHERE type = 'expense';
+
+-- 5. Dec 2025 salary_payout: paid from company bank
+UPDATE transactions SET source = 'bank'
+WHERE type = 'salary_payout' AND reference_month = '2025-12';
+
+-- 6. Dec 2025 contractor_tax: paid from Sanan's pocket (not bank)
+UPDATE transactions SET source = 'owner_pocket'
+WHERE type = 'contractor_tax' AND reference_month = '2025-12';
+
+-- 7. Jan 2026 salary_payout + contractor_tax: paid from Sanan's withdrawal
+UPDATE transactions SET source = 'owner_withdrawal'
+WHERE type IN ('salary_payout', 'contractor_tax') AND reference_month = '2026-01';
+
+-- 8. Feb 2026 salary_payout + contractor_tax: paid from Sanan's withdrawal
+UPDATE transactions SET source = 'owner_withdrawal'
+WHERE type IN ('salary_payout', 'contractor_tax') AND reference_month = '2026-02';
+
+-- 9. Mar 2026 salary_payout: paid from Sanan's withdrawal
+UPDATE transactions SET source = 'owner_withdrawal'
+WHERE type = 'salary_payout' AND reference_month = '2026-03';
+
+-- 10. Mar 2026 contractor_tax: paid from company bank (NOT from withdrawal)
+UPDATE transactions SET source = 'bank'
+WHERE type = 'contractor_tax' AND reference_month = '2026-03';
+
+-- 11. Owner repayments: these are Karim Farm transfers to Qaim's personal account
+--     (never went through company bank)
+UPDATE transactions SET source = 'owner_pocket'
+WHERE type = 'owner_repayment';
+
+-- 12. Client payments: received into company bank
+--     (except Karim Farm which went to Qaim's personal account)
+UPDATE transactions SET source = 'bank'
+WHERE type = 'client_payment';
+
+-- Karim Farm payments went to Qaim's personal account, not company bank
+UPDATE transactions SET source = 'owner_pocket'
+WHERE type = 'client_payment' AND description LIKE '%arim%';
+```
+
+### Going forward: defaults for new transactions
+
+- `salary_payout` → `source = 'bank'` (paid directly from bank now)
+- `contractor_tax` → `source = 'bank'` (paid directly from bank now)
+- `client_payment` → `source = 'bank'`
+- `owner_withdrawal` → `is_transfer = 1, source = 'bank'`
+- `owner_return` → `is_transfer = 1, source = 'bank'`
+- `owner_investment` → `is_transfer = 1, source = 'owner_pocket'`
+- `expense` → `source = 'owner_pocket'`
+- `owner_repayment` → `source = 'bank'`
+
+## How Dashboard Formulas Simplify
+
+After these DB changes, the dashboard formulas become simple:
+
+```
+Total In  = SUM(amount WHERE is_credit = 1 AND is_transfer = 0)
+          = client_payment + owner_return (none currently)
+          = Rs 13,200,862
+
+Total Out = SUM(amount WHERE is_credit = 0 AND is_transfer = 0)
+          = salary_payout + contractor_tax + expense + owner_repayment
+          = Rs 12,842,287
+
+Net Position = Total In - Total Out
+             = Rs 358,575
+
+Bank Balance = SUM(amount WHERE is_credit = 1 AND source = 'bank')
+             - SUM(amount WHERE is_credit = 0 AND source = 'bank')
+             - SUM(amount WHERE type = 'owner_withdrawal')
+             + SUM(amount WHERE type = 'owner_return')
+```
+
+**Bank Balance breakdown:**
+```
++ Client revenue (source=bank): Rs 13,200,862
+  - Karim Farm (source=owner_pocket): Rs 78,000
+  = Bank revenue: Rs 13,122,862
+
+- Dec salary (source=bank): Rs 3,161,478
+- Mar contractor tax (source=bank): Rs 114,859
+- Owner withdrawals: Rs 9,500,000
++ Owner returns: Rs 0
+= Bank Balance: Rs 346,525
+
++ Adjustments not in DB (deposits 105k, charges -1.16k):
+≈ Rs 450,364 (actual bank balance)
+```
+
+## Verification: What Each Total Should Show
+
+| Metric | Value | Formula |
+|--------|-------|---------|
+| Total In | Rs 13,200,862 | All revenue (credits, non-transfer) |
+| Total Out | Rs 12,842,287 | All expenses (debits, non-transfer) |
+| Net Position | Rs 358,575 | Total In - Total Out |
+| Bank Balance | ~Rs 450,364 | Bank-source credits - bank-source debits - withdrawals + returns |
+| Owes to Partners | Rs 698,178 | owner_investment - owner_repayment |
+| Sanan Withdrawal Balance | Rs 9,500,000 | owner_withdrawal - owner_return |
+
+## Owner Payback Calculation (using `source` column)
+
+The `source` column makes it trivial to compute what an owner needs to return:
+
+```sql
+-- What Sanan withdrew
+SELECT SUM(amount_pkr) FROM transactions
+WHERE type = 'owner_withdrawal' AND owner_id = '<sanan_id>';
+-- = 9,500,000
+
+-- What Sanan distributed (expenses he paid from that withdrawal)
+SELECT SUM(amount_pkr) FROM transactions
+WHERE source = 'owner_withdrawal'
+  AND type IN ('salary_payout', 'contractor_tax');
+-- = 8,715,612
+
+-- What Sanan returned
+SELECT SUM(amount_pkr) FROM transactions
+WHERE type = 'owner_return' AND owner_id = '<sanan_id>';
+-- = 0
+
+-- Owner payback = withdrew - distributed - returned
+-- = 9,500,000 - 8,715,612 - 0 = 784,388
+```
+
+**Dashboard "Owner Receivables" card should show:**
+- Sanan: Rs 784,388 (withdrew 9,500,000 − distributed 8,715,612 − returned 0)
+
+This is accurate because `source = 'owner_withdrawal'` on salary/tax entries directly tells us
+which expenses were funded from the withdrawal — no heuristics or month-matching needed.
+
+## TypeScript Changes Needed
+
+```typescript
+// Update Transaction interface
+export interface Transaction {
+  // ... existing fields ...
+  source: 'bank' | 'owner_pocket' | 'owner_withdrawal';
+  is_transfer: boolean;
+}
+
+// Dashboard formulas become trivial:
+const totalIn = allTxns
+  .filter(t => t.is_credit && !t.is_transfer)
+  .reduce((s, t) => s + t.amount_pkr, 0);
+
+const totalOut = allTxns
+  .filter(t => !t.is_credit && !t.is_transfer)
+  .reduce((s, t) => s + t.amount_pkr, 0);
+
+const bankBalance = allTxns
+  .filter(t => t.source === 'bank' || t.type === 'owner_withdrawal' || t.type === 'owner_return')
+  .reduce((s, t) => s + (t.is_credit ? t.amount_pkr : -t.amount_pkr), 0);
+```
+
+## Execution Order
+
+```
+1. Run ALTER TABLE to add columns             (SQL migration)
+2. Run UPDATE statements to set flags         (SQL updates above)
+3. Update TypeScript Transaction interface    (types.ts)
+4. Update dashboard formulas                  (dashboard/page.tsx)
+5. Update transaction form defaults           (transactions/page.tsx)
+6. Update API routes to handle new fields     (api/transactions)
+7. Verify totals match expected values
+```

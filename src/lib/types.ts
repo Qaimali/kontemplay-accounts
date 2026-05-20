@@ -64,6 +64,8 @@ export type TransactionType =
   | "owner_withdrawal"
   | "owner_return";
 
+export type TransactionSource = "bank" | "owner_pocket" | "owner_withdrawal";
+
 export interface Transaction {
   id: string;
   type: TransactionType;
@@ -77,6 +79,8 @@ export interface Transaction {
   owner_id: string | null;
   created_by: string | null;
   created_at: string;
+  source: TransactionSource;
+  is_transfer: boolean;
   // joined
   owner?: Owner;
   employee?: Employee;

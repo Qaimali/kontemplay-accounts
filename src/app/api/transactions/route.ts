@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   sql += ` ORDER BY ${orderBy === "reference_month" ? "reference_month" : "created_at"} ${order === "asc" ? "ASC" : "DESC"}`;
 
   const rows = await query(sql, params);
-  return NextResponse.json(rows.map(r => ({ ...r, is_credit: !!r.is_credit })));
+  return NextResponse.json(rows.map(r => ({ ...r, is_credit: !!r.is_credit, is_transfer: !!r.is_transfer })));
 }
 
 export async function POST(req: NextRequest) {
@@ -40,9 +40,16 @@ export async function POST(req: NextRequest) {
   for (const item of items) {
     const id = uuid();
     ids.push(id);
+    // Determine defaults for source and is_transfer based on type
+    const transferTypes = ["owner_withdrawal", "owner_return", "owner_investment"];
+    const isTransfer = item.is_transfer ?? (transferTypes.includes(item.type) ? 1 : 0);
+    const defaultSource = item.type === "expense" || item.type === "owner_investment"
+      ? "owner_pocket"
+      : "bank";
+
     await execute(
-      `INSERT INTO transactions (id, type, amount_pkr, is_credit, description, reference_month, distribution_id, invoice_id, employee_id, owner_id, created_by, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO transactions (id, type, amount_pkr, is_credit, description, reference_month, distribution_id, invoice_id, employee_id, owner_id, created_by, created_at, source, is_transfer)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, item.type, item.amount_pkr, item.is_credit ? 1 : 0,
         item.description ?? null, item.reference_month ?? null,
@@ -50,6 +57,8 @@ export async function POST(req: NextRequest) {
         item.employee_id ?? null, item.owner_id ?? null,
         item.created_by ?? owner.id,
         item.created_at ?? new Date().toISOString(),
+        item.source ?? defaultSource,
+        isTransfer ? 1 : 0,
       ]
     );
   }

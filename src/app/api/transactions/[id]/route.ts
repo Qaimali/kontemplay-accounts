@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const sets: string[] = [];
   const values: unknown[] = [];
   for (const [key, val] of Object.entries(body)) {
-    if (key === "is_credit") {
+    if (key === "is_credit" || key === "is_transfer") {
       sets.push(`${key} = ?`);
       values.push(val ? 1 : 0);
     } else {

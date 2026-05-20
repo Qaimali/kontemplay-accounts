@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tip } from "@/components/ui/tip";
-import { Scale, ChevronDown } from "lucide-react";
+import { Scale, ChevronDown, ArrowDownLeft } from "lucide-react";
 
 type OwnerLiability = {
   id: string;
@@ -32,16 +32,29 @@ type OwnerLiability = {
   >;
 };
 
+type OwnerReceivable = {
+  id: string;
+  name: string;
+  withdrawn: number;
+  distributed: number;
+  returned: number;
+  balance: number;
+};
+
 export function OwnerLiabilities({
   owners,
   totalOwed,
+  receivables = [],
 }: {
   owners: OwnerLiability[];
   totalOwed: number;
+  receivables?: OwnerReceivable[];
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  if (owners.length === 0) return null;
+  if (owners.length === 0 && receivables.length === 0) return null;
+
+  const totalReceivable = receivables.reduce((s, r) => s + r.balance, 0);
 
   return (
     <Card>
@@ -186,12 +199,48 @@ export function OwnerLiabilities({
             </div>
           );
         })}
-        <div className="border-t border-border/30 pt-3 mt-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">Total Owed</span>
-            <span className="font-mono font-bold tabular-nums">{formatPKR(totalOwed)}</span>
+        {owners.length > 0 && (
+          <div className="border-t border-border/30 pt-3 mt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold">Total Owed</span>
+              <span className="font-mono font-bold tabular-nums">{formatPKR(totalOwed)}</span>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Owner Receivables — what owners owe the company */}
+        {receivables.length > 0 && (
+          <div className="border-t border-amber-500/20 pt-4 mt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowDownLeft className="size-4 text-amber-400" />
+              <span className="text-sm font-semibold text-amber-400">Owner Receivables</span>
+              <Tip text="What owners owe the company. This is the unreturned balance from cash withdrawn from the company bank for salary distributions." />
+            </div>
+            {receivables.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between rounded-xl bg-amber-500/5 border border-amber-500/10 px-4 py-3 mb-2"
+              >
+                <div>
+                  <span className="text-sm font-medium">{r.name}</span>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Withdrew {formatPKR(r.withdrawn)} \u2022 Distributed {formatPKR(r.distributed)}
+                    {r.returned > 0 ? ` \u2022 Returned ${formatPKR(r.returned)}` : ""}
+                  </p>
+                </div>
+                <span className="font-mono text-sm font-semibold tabular-nums text-amber-400">
+                  {formatPKR(r.balance)}
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-sm font-semibold text-amber-400">Total Receivable</span>
+              <span className="font-mono font-bold tabular-nums text-amber-400">
+                {formatPKR(totalReceivable)}
+              </span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

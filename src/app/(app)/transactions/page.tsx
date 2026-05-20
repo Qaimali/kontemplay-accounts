@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { formatPKR, formatMonth } from "@/lib/format";
 import { exportToCSV } from "@/lib/export";
-import type { Transaction, TransactionType, Owner } from "@/lib/types";
+import type { Transaction, TransactionType, TransactionSource, Owner } from "@/lib/types";
 import {
   Card,
   CardHeader,
@@ -93,6 +93,18 @@ const allFilterTypes: { value: TransactionType; label: string }[] = [
   { value: "owner_return", label: "Owner Return" },
 ];
 
+const allSourceTypes: { value: TransactionSource; label: string }[] = [
+  { value: "bank", label: "Bank" },
+  { value: "owner_pocket", label: "Owner Pocket" },
+  { value: "owner_withdrawal", label: "From Withdrawal" },
+];
+
+const sourceLabels: Record<TransactionSource, string> = {
+  bank: "Bank",
+  owner_pocket: "Pocket",
+  owner_withdrawal: "Withdrawal",
+};
+
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -119,6 +131,9 @@ export default function TransactionsPage() {
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterSource, setFilterSource] = useState<string>("");
+  const [filterTransfer, setFilterTransfer] = useState<string>("");
+  const [filterOwner, setFilterOwner] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Dialog state
@@ -133,6 +148,8 @@ export default function TransactionsPage() {
   const [editDate, setEditDate] = useState("");
   const [editReferenceMonth, setEditReferenceMonth] = useState("");
   const [editOwnerId, setEditOwnerId] = useState("");
+  const [editSource, setEditSource] = useState<string>("bank");
+  const [editIsTransfer, setEditIsTransfer] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
 
   // Form state
@@ -165,6 +182,12 @@ export default function TransactionsPage() {
     fetchOwners();
   }, [fetchOwners]);
 
+  const ownerNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const o of owners) map[o.id] = o.name;
+    return map;
+  }, [owners]);
+
   // Available years from data
   const availableYears = useMemo(() => {
     const years = new Set<string>();
@@ -184,6 +207,10 @@ export default function TransactionsPage() {
       if (filterMonth && (d.getMonth() + 1).toString() !== filterMonth) return false;
       if (filterDateFrom && txn.created_at < filterDateFrom) return false;
       if (filterDateTo && txn.created_at > filterDateTo + "T23:59:59") return false;
+      if (filterSource && txn.source !== filterSource) return false;
+      if (filterTransfer === "yes" && !txn.is_transfer) return false;
+      if (filterTransfer === "no" && txn.is_transfer) return false;
+      if (filterOwner && txn.owner_id !== filterOwner) return false;
 
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -194,7 +221,7 @@ export default function TransactionsPage() {
 
       return true;
     });
-  }, [allTransactions, filterType, filterYear, filterMonth, filterDateFrom, filterDateTo, searchQuery]);
+  }, [allTransactions, filterType, filterYear, filterMonth, filterDateFrom, filterDateTo, filterSource, filterTransfer, filterOwner, searchQuery]);
 
   // Totals — exclude reconciliation types (owner_withdrawal/owner_return) from operational totals
   const totalCredits = useMemo(
@@ -216,7 +243,11 @@ export default function TransactionsPage() {
     () => transactions.filter((t) => t.type === "owner_return").reduce((s, t) => s + t.amount_pkr, 0),
     [transactions]
   );
-  const withdrawalBalance = totalWithdrawals - totalReturns;
+  const distributedFromWithdrawals = useMemo(
+    () => transactions.filter((t) => t.source === "owner_withdrawal" && !t.is_transfer).reduce((s, t) => s + t.amount_pkr, 0),
+    [transactions]
+  );
+  const withdrawalBalance = totalWithdrawals - distributedFromWithdrawals - totalReturns;
 
   const resetForm = () => {
     setFormType("client_payment");
@@ -234,8 +265,6 @@ export default function TransactionsPage() {
     setSaving(true);
 
     const isCredit = isCreditType(formType);
-    const needsOwner =
-      formType === "owner_investment" || formType === "owner_repayment" || formType === "owner_withdrawal" || formType === "owner_return";
 
     const res = await fetch("/api/transactions", {
       method: "POST",
@@ -246,7 +275,7 @@ export default function TransactionsPage() {
         is_credit: isCredit,
         description: formDescription || null,
         reference_month: formReferenceMonth || null,
-        owner_id: needsOwner && formOwnerId ? formOwnerId : null,
+        owner_id: formOwnerId || null,
         created_at: formDate ? `${formDate}T00:00:00+05:00` : undefined,
       }),
     });
@@ -261,8 +290,7 @@ export default function TransactionsPage() {
     }
   };
 
-  const showOwnerField =
-    formType === "owner_investment" || formType === "owner_repayment" || formType === "owner_withdrawal" || formType === "owner_return";
+  const showOwnerField = true;
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -317,6 +345,8 @@ export default function TransactionsPage() {
     setEditDate(new Date(txn.created_at).toISOString().slice(0, 10));
     setEditReferenceMonth(txn.reference_month ?? "");
     setEditOwnerId(txn.owner_id ?? "");
+    setEditSource(txn.source ?? "bank");
+    setEditIsTransfer(!!txn.is_transfer);
     setEditDialogOpen(true);
   }
 
@@ -328,7 +358,6 @@ export default function TransactionsPage() {
     setEditSaving(true);
 
     const isCredit = isCreditType(editType);
-    const needsOwner = editType === "owner_investment" || editType === "owner_repayment" || editType === "owner_withdrawal" || editType === "owner_return";
 
     const res = await fetch(`/api/transactions/${editingTxn.id}`, {
       method: "PATCH",
@@ -339,8 +368,10 @@ export default function TransactionsPage() {
         is_credit: isCredit,
         description: editDescription || null,
         reference_month: editReferenceMonth || null,
-        owner_id: needsOwner && editOwnerId ? editOwnerId : null,
+        owner_id: editOwnerId || null,
         created_at: editDate ? `${editDate}T00:00:00+05:00` : undefined,
+        source: editSource,
+        is_transfer: editIsTransfer,
       }),
     });
     const error = !res.ok;
@@ -348,9 +379,27 @@ export default function TransactionsPage() {
     setEditSaving(false);
 
     if (!error) {
+      // Update in-place to preserve scroll position
+      setAllTransactions((prev) =>
+        prev.map((t) =>
+          t.id === editingTxn.id
+            ? {
+                ...t,
+                type: editType,
+                amount_pkr: amount,
+                is_credit: isCredit,
+                description: editDescription || null,
+                reference_month: editReferenceMonth || null,
+                owner_id: editOwnerId || null,
+                created_at: editDate ? `${editDate}T00:00:00+05:00` : t.created_at,
+                source: editSource as TransactionSource,
+                is_transfer: editIsTransfer,
+              }
+            : t
+        )
+      );
       setEditDialogOpen(false);
       setEditingTxn(null);
-      fetchTransactions();
     }
   }
 
@@ -360,10 +409,13 @@ export default function TransactionsPage() {
     setFilterMonth("");
     setFilterDateFrom("");
     setFilterDateTo("");
+    setFilterSource("");
+    setFilterTransfer("");
+    setFilterOwner("");
     setSearchQuery("");
   }
 
-  const hasFilters = filterType || filterYear || filterMonth || filterDateFrom || filterDateTo || searchQuery;
+  const hasFilters = filterType || filterYear || filterMonth || filterDateFrom || filterDateTo || filterSource || filterTransfer || filterOwner || searchQuery;
 
   return (
     <div className="space-y-8">
@@ -424,6 +476,52 @@ export default function TransactionsPage() {
               <SelectItem value="">All months</SelectItem>
               {MONTHS.map((m, i) => (
                 <SelectItem key={i + 1} value={(i + 1).toString()}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-[13px]">Source</Label>
+          <Select value={filterSource} onValueChange={(v) => setFilterSource(v ?? "")}>
+            <SelectTrigger className="sm:w-[155px]">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All sources</SelectItem>
+              {allSourceTypes.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-[13px]">Transfer</Label>
+          <Select value={filterTransfer} onValueChange={(v) => setFilterTransfer(v ?? "")}>
+            <SelectTrigger className="sm:w-[130px]">
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              <SelectItem value="yes">Transfers only</SelectItem>
+              <SelectItem value="no">Non-transfers</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-[13px]">Owner</Label>
+          <Select value={filterOwner} onValueChange={(v) => setFilterOwner(v ?? "")}>
+            <SelectTrigger className="sm:w-[150px]">
+              <SelectValue placeholder="All">
+                {filterOwner ? (ownerNames[filterOwner] ?? "All") : "All"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All owners</SelectItem>
+              {owners.map((o) => (
+                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -600,7 +698,9 @@ export default function TransactionsPage() {
                         onValueChange={(v) => setFormOwnerId(v ?? "")}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select owner" />
+                          <SelectValue placeholder="Select owner">
+                            {formOwnerId ? (ownerNames[formOwnerId] ?? "Select owner") : "Select owner"}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {owners.map((o) => (
@@ -656,7 +756,7 @@ export default function TransactionsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table containerClassName="max-h-[calc(100vh-22rem)]">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-10">
@@ -669,6 +769,8 @@ export default function TransactionsPage() {
                     <TableHead>Type</TableHead>
                     <TableHead className="hidden sm:table-cell">Description</TableHead>
                     <TableHead className="hidden md:table-cell">Month</TableHead>
+                    <TableHead className="hidden lg:table-cell">Owner</TableHead>
+                    <TableHead className="hidden lg:table-cell">Source</TableHead>
                     <TableHead className="text-right">Credit</TableHead>
                     <TableHead className="text-right">Debit</TableHead>
                     <TableHead className="w-20"></TableHead>
@@ -702,6 +804,12 @@ export default function TransactionsPage() {
                         {txn.reference_month
                           ? formatMonth(txn.reference_month)
                           : "-"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                        {txn.owner_id ? ownerNames[txn.owner_id] ?? "-" : "-"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground">
+                        {txn.source ? sourceLabels[txn.source] ?? txn.source : "-"}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
                         {txn.is_credit ? (
@@ -754,7 +862,10 @@ export default function TransactionsPage() {
                     <TableCell colSpan={4} className="text-right font-semibold hidden sm:table-cell md:hidden">
                       Totals
                     </TableCell>
-                    <TableCell colSpan={5} className="text-right font-semibold hidden md:table-cell">
+                    <TableCell colSpan={5} className="text-right font-semibold hidden md:table-cell lg:hidden">
+                      Totals
+                    </TableCell>
+                    <TableCell colSpan={7} className="text-right font-semibold hidden lg:table-cell">
                       Totals
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
@@ -776,7 +887,10 @@ export default function TransactionsPage() {
                     <TableCell colSpan={4} className="text-right font-semibold hidden sm:table-cell md:hidden">
                       Net
                     </TableCell>
-                    <TableCell colSpan={5} className="text-right font-semibold hidden md:table-cell">
+                    <TableCell colSpan={5} className="text-right font-semibold hidden md:table-cell lg:hidden">
+                      Net
+                    </TableCell>
+                    <TableCell colSpan={7} className="text-right font-semibold hidden lg:table-cell">
                       Net
                     </TableCell>
                     <TableCell colSpan={2} className="text-right whitespace-nowrap">
@@ -795,7 +909,10 @@ export default function TransactionsPage() {
                         <TableCell colSpan={4} className="text-right text-sm text-amber-500 hidden sm:table-cell md:hidden">
                           Owner Withdrawals
                         </TableCell>
-                        <TableCell colSpan={5} className="text-right text-sm text-amber-500 hidden md:table-cell">
+                        <TableCell colSpan={5} className="text-right text-sm text-amber-500 hidden md:table-cell lg:hidden">
+                          Owner Withdrawals
+                        </TableCell>
+                        <TableCell colSpan={7} className="text-right text-sm text-amber-500 hidden lg:table-cell">
                           Owner Withdrawals
                         </TableCell>
                         <TableCell className="text-right whitespace-nowrap">
@@ -817,13 +934,16 @@ export default function TransactionsPage() {
                       {withdrawalBalance > 0 && (
                         <TableRow>
                           <TableCell colSpan={3} className="text-right text-sm font-medium text-amber-500 sm:hidden">
-                            Unreturned Balance
+                            Owner Holds (to return)
                           </TableCell>
                           <TableCell colSpan={4} className="text-right text-sm font-medium text-amber-500 hidden sm:table-cell md:hidden">
-                            Unreturned Balance
+                            Owner Holds (to return)
                           </TableCell>
-                          <TableCell colSpan={5} className="text-right text-sm font-medium text-amber-500 hidden md:table-cell">
-                            Unreturned Balance
+                          <TableCell colSpan={5} className="text-right text-sm font-medium text-amber-500 hidden md:table-cell lg:hidden">
+                            Owner Holds (to return)
+                          </TableCell>
+                          <TableCell colSpan={7} className="text-right text-sm font-medium text-amber-500 hidden lg:table-cell">
+                            Owner Holds (to return)
                           </TableCell>
                           <TableCell colSpan={2} className="text-right whitespace-nowrap">
                             <span className="font-mono tabular-nums text-sm font-semibold text-amber-500">
@@ -912,15 +1032,16 @@ export default function TransactionsPage() {
               />
             </div>
 
-            {(editType === "owner_investment" || editType === "owner_repayment" || editType === "owner_withdrawal" || editType === "owner_return") && (
-              <div className="space-y-1.5">
+            <div className="space-y-1.5">
                 <Label className="text-[13px]">Owner</Label>
                 <Select
                   value={editOwnerId}
                   onValueChange={(v) => setEditOwnerId(v ?? "")}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={owners.find((o) => o.id === editOwnerId)?.name ?? "Select owner"} />
+                    <SelectValue placeholder="Select owner">
+                      {editOwnerId ? (ownerNames[editOwnerId] ?? "Select owner") : "Select owner"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {owners.map((o) => (
@@ -931,7 +1052,34 @@ export default function TransactionsPage() {
                   </SelectContent>
                 </Select>
               </div>
-            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Source</Label>
+                <Select value={editSource} onValueChange={(v) => setEditSource(v ?? "bank")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSourceTypes.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[13px]">Transfer?</Label>
+                <Select value={editIsTransfer ? "yes" : "no"} onValueChange={(v) => setEditIsTransfer(v === "yes")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no">No (operational)</SelectItem>
+                    <SelectItem value="yes">Yes (transfer)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             <div className="text-sm text-muted-foreground">
               This will be recorded as a{" "}
