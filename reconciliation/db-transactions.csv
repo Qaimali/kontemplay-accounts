@@ -1,0 +1,60 @@
+Date,Type,Description,Reference Month,Owner,Credit PKR,Debit PKR
+2024-09-21,Owner Investment,"Domain (paid by owner)",2024-09,Arsalan Dogar,3200,
+2024-09-22,Expense,Domain,2024-09,,,"3,200"
+2025-06-26,Owner Investment,"Logo one cost (paid by owner)",2025-06,Qaim Ali,"15,000",
+2025-06-26,Owner Investment,"Logo payment (paid by owner)",2025-06,Sanan Babar,"30,000",
+2025-06-27,Expense,Logo one cost,2025-06,,,"15,000"
+2025-06-27,Expense,Logo payment,2025-06,,,"30,000"
+2025-08-06,Owner Investment,"Card fronts (paid by owner)",2025-08,Qaim Ali,"3,750",
+2025-08-07,Expense,Card fronts,2025-08,,,"3,750"
+2025-10-14,Owner Investment,"Kontemplay Domain (paid by owner)",2025-10,Arsalan Dogar,"2,888",
+2025-10-15,Expense,Kontemplay Domain,2025-10,,,"2,888"
+2025-11-22,Owner Investment,"Designer 1sep - 19 nov (paid by owner)",2025-11,Sanan Babar,"177,736",
+2025-11-23,Expense,"Designer 1sep - 19 nov",2025-11,,,"177,736"
+2025-11-29,Owner Investment,"Secp reg and advance (paid by owner)",2025-12,Sanan Babar,"41,511",
+2025-11-30,Expense,SECP reg and advance,2025-12,,,"41,511"
+2025-12-13,Owner Investment,"Fbr reg fee (paid by owner)",2025-12,Sanan Babar,"20,000",
+2025-12-14,Expense,FBR reg fee,2025-12,,,"20,000"
+2025-12-21,Owner Investment,"Designer 20-30Nov (paid by owner)",2025-12,Arsalan Dogar,"91,392",
+2025-12-22,Expense,Designer 20-30Nov,2025-12,,,"91,392"
+2026-01-21,Owner Investment,Sanan Account Starting Payment,2025-12,Sanan Babar,"5,000",
+2026-02-09,Owner Repayment,Karim farms advance,2026-02,Qaim Ali,,"28,000"
+2026-02-09,Client Payment,karim farm payment,2026-02,,28000,
+2026-02-10,Owner Investment,"Sanan paid for FBR contractor tax",2025-12,Sanan Babar,"133,115",
+2026-02-10,Salary Payout,"Qaim Ali - salary Dec 2025",2025-12,,,"1,060,929"
+2026-02-10,Salary Payout,"Fatima - salary Dec 2025",2025-12,,,"349,389"
+2026-02-10,Salary Payout,"Zaki - salary Dec 2025",2025-12,,,"592,498"
+2026-02-10,Salary Payout,"Mubashir - salary Dec 2025",2025-12,,,"329,165"
+2026-02-10,Salary Payout,"Fitrus - salary Dec 2025",2025-12,,,"829,497"
+2026-02-10,Contractor Tax,"Contractor tax - Dec 2025",2025-12,,,"133,115"
+2026-02-10,Client Payment,"Client payment - Dec 2025 (11650 USD)",2025-12,,"3,220,382",
+2026-02-11,Owner Investment,"Fatima pmt (paid by owner)",2026-02,Qaim Ali,"80,000",
+2026-02-11,Expense,Fatima pmt,2026-02,,,"80,000"
+2026-02-13,Expense,CHEQUES RETURN CHARGES,2025-12,,,"1,000"
+2026-02-13,Expense,FEDERAL EXCISE DUTY,2025-12,,,160
+2026-03-05,Owner Investment,"FBR (paid by owner)",2026-03,Sanan Babar,"131,986",
+2026-03-05,Owner Investment,"15 lawyer + 20k bank transfer + 5.6k PSEB (paid by owner)",2026-03,Sanan Babar,"40,600",
+2026-03-05,Expense,FBR,2026-03,,,"131,986"
+2026-03-05,Expense,"15 lawyer + 20k bank transfer + 5.6k PSEB",2026-03,,,"40,600"
+2026-03-17,Client Payment,"Invoice #2 - Youth Athletes United (2026-01)",2026-01,,"3,191,954",
+2026-03-17,Salary Payout,"Fitrus - salary 2026-01",2026-01,,,"384,889"
+2026-03-17,Salary Payout,"Mubashir - salary 2026-01",2026-01,,,"652,355"
+2026-03-17,Salary Payout,"Qaim Ali - salary 2026-01",2026-01,,,"1,051,307"
+2026-03-17,Salary Payout,"Zaki - salary 2026-01",2026-01,,,"587,119"
+2026-03-17,Contractor Tax,"Contractor tax - 2026-01",2026-01,,,"113,556"
+2026-04-15,Client Payment,"Feb 2026 Invoice",2026-02,,"3,478,158",
+2026-04-16,Salary Payout,"Fitrus - salary 2026-02",2026-02,,,"652,559"
+2026-04-16,Salary Payout,"Mubashir - salary 2026-02",2026-02,,,"652,559"
+2026-04-16,Salary Payout,"Qaim Ali - salary 2026-02",2026-02,,,"1,051,635"
+2026-04-16,Salary Payout,"Zaki - salary 2026-02",2026-02,,,"587,303"
+2026-04-16,Contractor Tax,"Contractor tax - 2026-02",2026-02,,,"124,947"
+2026-04-20,Salary Payout,"Fatima - direct invoice 2026-02",2026-02,,,"144,909"
+2026-04-20,Contractor Tax,"Contractor tax - direct invoice",2026-02,,,"6,101"
+2026-04-21,Client Payment,"Karim Farm P2, transferred to Qaim's Account",2026-04,,"50,000",
+2026-05-10,Owner Repayment,"paid loan back to Qaim",2026-02,Qaim Ali,,"50,000"
+2026-05-10,Client Payment,march paymnt,2026-03,,"3,232,368",
+2026-05-11,Salary Payout,"Fitrus - salary 2026-03",2026-03,,,"422,709"
+2026-05-11,Salary Payout,"Mubashir - salary 2026-03",2026-03,,,"650,321"
+2026-05-11,Salary Payout,"Qaim Ali - salary 2026-03",2026-03,,,"1,048,053"
+2026-05-11,Salary Payout,"Zaki - salary 2026-03",2026-03,,,"585,289"
+2026-05-11,Contractor Tax,"Contractor tax - 2026-03",2026-03,,,"114,859"
