@@ -35,11 +35,13 @@ const typeLabels: Record<TransactionType, string> = {
   contractor_tax: "Contractor Tax",
   owner_repayment: "Owner Repayment",
   expense: "Expense",
+  owner_withdrawal: "Owner Withdrawal",
+  owner_return: "Owner Return",
 };
 
 const typeBadgeVariant: Record<
   TransactionType,
-  "default" | "secondary" | "destructive" | "outline"
+  "default" | "secondary" | "destructive" | "outline" | "warning"
 > = {
   client_payment: "default",
   owner_investment: "secondary",
@@ -47,6 +49,8 @@ const typeBadgeVariant: Record<
   contractor_tax: "destructive",
   owner_repayment: "outline",
   expense: "destructive",
+  owner_withdrawal: "warning",
+  owner_return: "warning",
 };
 
 export default async function DashboardPage() {

@@ -32,6 +32,8 @@ const typeLabels: Record<TransactionType, string> = {
   contractor_tax: "Contractor Tax",
   owner_repayment: "Owner Repayment",
   expense: "Expense",
+  owner_withdrawal: "Owner Withdrawal",
+  owner_return: "Owner Return",
 };
 
 interface MonthlyPL {

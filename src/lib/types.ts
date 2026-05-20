@@ -60,7 +60,9 @@ export type TransactionType =
   | "salary_payout"
   | "contractor_tax"
   | "owner_repayment"
-  | "expense";
+  | "expense"
+  | "owner_withdrawal"
+  | "owner_return";
 
 export interface Transaction {
   id: string;

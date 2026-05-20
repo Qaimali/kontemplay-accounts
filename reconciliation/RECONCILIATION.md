@@ -358,3 +358,342 @@ Now that you have UBL online portal access (May 20, 2026):
 2. **Pay contractor taxes directly from company bank** to government account
 3. **Record each transaction in Kontemplay Finance app** as it happens
 4. **No more advance/withdrawal pattern** — everything goes direct
+
+---
+---
+
+# Implementation Plan: DB Changes + Transaction Page Visualization
+
+## The Problem
+
+The transactions page currently shows salary_payouts and contractor_taxes as debits, but there's no record of HOW the money left the company bank for Jan/Feb/Mar 2026 — Sanan withdrew lump sums via cheque and distributed from his personal account. Looking at the transactions page, you can't see this happened.
+
+## What We Want to See on the Transactions Page
+
+When someone opens the transactions page and looks at Jan 2026:
+
+```
+DATE         TYPE                DESCRIPTION                           CREDIT      DEBIT
+─────────────────────────────────────────────────────────────────────────────────────────
+10-Mar-2026  Client Payment      Jan 2026 Invoice                    3,191,954        -
+17-Mar-2026  Owner Withdrawal    Sanan withdrew for Jan 2026 dist.         -    3,200,000
+18-Mar-2026  Salary Payout       Qaim Ali - salary 2026-01                 -    1,051,307
+18-Mar-2026  Salary Payout       Zaki - salary 2026-01                     -      587,119
+18-Mar-2026  Salary Payout       Mubashir - salary 2026-01                -      652,355
+18-Mar-2026  Salary Payout       Fitrus - salary 2026-01                   -      384,889
+18-Mar-2026  Contractor Tax      Contractor tax - 2026-01                  -      113,556
+```
+
+The `Owner Withdrawal` badge would be styled differently (amber/warning) so it stands out as a bank movement, not an operational cost.
+
+**Key rule:** `owner_withdrawal` entries are bank-level movements. The salary_payouts underneath are what Sanan did with that money. They overlap — so we must NOT double-count them in totals.
+
+---
+
+## Phase 1: Fix Existing Data (no code changes)
+
+### 1a. Fix Feb 2026 client payment reference_month
+
+```sql
+UPDATE transactions 
+SET reference_month = '2026-02' 
+WHERE id = '5fc9bec0-58dc-4372-ae47-18bcc04934c6';
+-- Currently says '2024-02', should be '2026-02'
+```
+
+---
+
+## Phase 2: Add New Transaction Types
+
+### 2a. SQL Migration (`migrations/0003_add_withdrawal_types.sql`)
+
+```sql
+-- D1/SQLite doesn't support ALTER TABLE to modify CHECK constraints.
+-- We need to recreate the table or just remove the CHECK and rely on app-level validation.
+-- Simplest approach: drop the CHECK constraint (D1 doesn't enforce it strictly anyway).
+
+-- Alternative: the app already validates types in TypeScript, so the CHECK is redundant.
+-- We'll add a migration that documents the new types.
+
+-- If CHECK enforcement is needed, we'd recreate the table. For now, the app-level
+-- validation in TypeScript is sufficient.
+```
+
+### 2b. Update `src/lib/types.ts`
+
+```typescript
+export type TransactionType =
+  | "client_payment"
+  | "owner_investment"
+  | "salary_payout"
+  | "contractor_tax"
+  | "owner_repayment"
+  | "expense"
+  | "owner_withdrawal"   // NEW: money taken from company bank by owner for distribution
+  | "owner_return";      // NEW: excess money returned by owner to company bank
+```
+
+### 2c. Update `src/app/(app)/transactions/page.tsx`
+
+**Type labels:**
+```typescript
+const typeLabels: Record<TransactionType, string> = {
+  client_payment: "Client Payment",
+  owner_investment: "Owner Investment",
+  salary_payout: "Salary Payout",
+  contractor_tax: "Contractor Tax",
+  owner_repayment: "Owner Repayment",
+  expense: "Expense",
+  owner_withdrawal: "Owner Withdrawal",   // NEW
+  owner_return: "Owner Return",           // NEW
+};
+```
+
+**Badge variants (amber/warning style for withdrawal/return):**
+```typescript
+const typeBadgeVariant: Record<TransactionType, string> = {
+  client_payment: "default",
+  owner_investment: "secondary",
+  salary_payout: "destructive",
+  contractor_tax: "destructive",
+  owner_repayment: "outline",
+  expense: "destructive",
+  owner_withdrawal: "warning",   // NEW - amber badge
+  owner_return: "warning",       // NEW - amber badge
+};
+```
+
+**Addable types (so users can manually add these):**
+```typescript
+const addableTypes = [
+  { value: "client_payment", label: "Client Payment" },
+  { value: "owner_investment", label: "Owner Investment" },
+  { value: "owner_repayment", label: "Owner Repayment" },
+  { value: "expense", label: "Expense" },
+  { value: "owner_withdrawal", label: "Owner Withdrawal" },   // NEW
+  { value: "owner_return", label: "Owner Return" },           // NEW
+];
+```
+
+**Filter types:**
+```typescript
+const allFilterTypes = [
+  // ... existing types ...
+  { value: "owner_withdrawal", label: "Owner Withdrawal" },   // NEW
+  { value: "owner_return", label: "Owner Return" },           // NEW
+];
+```
+
+**Credit/debit logic:**
+```typescript
+function isCreditType(type: TransactionType): boolean {
+  return type === "client_payment" || type === "owner_investment" || type === "owner_return";
+  // owner_return is credit (money coming back to company)
+}
+// owner_withdrawal is debit (money leaving company bank)
+```
+
+**Net calculation — EXCLUDE withdrawal/return to avoid double-counting:**
+```typescript
+// These are bank-movement entries, not operational — exclude from totals
+const reconciliationTypes = ["owner_withdrawal", "owner_return"];
+
+const totalCredits = useMemo(
+  () => transactions
+    .filter((t) => t.is_credit && !reconciliationTypes.includes(t.type))
+    .reduce((s, t) => s + t.amount_pkr, 0),
+  [transactions]
+);
+const totalDebits = useMemo(
+  () => transactions
+    .filter((t) => !t.is_credit && !reconciliationTypes.includes(t.type))
+    .reduce((s, t) => s + t.amount_pkr, 0),
+  [transactions]
+);
+const net = totalCredits - totalDebits;
+
+// NEW: Show withdrawal/return totals separately
+const totalWithdrawals = useMemo(
+  () => transactions
+    .filter((t) => t.type === "owner_withdrawal")
+    .reduce((s, t) => s + t.amount_pkr, 0),
+  [transactions]
+);
+const totalReturns = useMemo(
+  () => transactions
+    .filter((t) => t.type === "owner_return")
+    .reduce((s, t) => s + t.amount_pkr, 0),
+  [transactions]
+);
+```
+
+### 2d. Update `src/app/(app)/dashboard/page.tsx`
+
+Cash Position formula — **no change needed**. It already only sums specific types:
+```typescript
+const cashPosition = clientRevenue - operatingCost - ownerRepayments;
+// This naturally ignores owner_withdrawal and owner_return
+```
+
+But add the labels/badges for the new types so they render correctly in the recent transactions table.
+
+### 2e. Update `src/app/(app)/reports/page.tsx`
+
+Add the new type labels so filtered reports render correctly.
+
+---
+
+## Phase 3: Create New Transaction Entries
+
+### 3a. Three withdrawal entries (what actually left the bank)
+
+```sql
+-- Jan 2026 withdrawal
+INSERT INTO transactions (id, type, amount_pkr, is_credit, description, reference_month, owner_id, created_at)
+VALUES (
+  lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(6))),
+  'owner_withdrawal',
+  3200000,
+  0,
+  'Sanan withdrew for Jan 2026 salary + tax distribution (cheque #95771981)',
+  '2026-01',
+  'aad1cfc5-5670-423e-9ae0-2790935aa162',
+  '2026-03-17T00:00:00+05:00'
+);
+
+-- Feb 2026 withdrawal
+INSERT INTO transactions (id, type, amount_pkr, is_credit, description, reference_month, owner_id, created_at)
+VALUES (
+  lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(6))),
+  'owner_withdrawal',
+  3000000,
+  0,
+  'Sanan withdrew for Feb 2026 salary + tax distribution (cheque #95771982)',
+  '2026-02',
+  'aad1cfc5-5670-423e-9ae0-2790935aa162',
+  '2026-04-16T00:00:00+05:00'
+);
+
+-- Mar 2026 withdrawal
+INSERT INTO transactions (id, type, amount_pkr, is_credit, description, reference_month, owner_id, created_at)
+VALUES (
+  lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(6))),
+  'owner_withdrawal',
+  3300000,
+  0,
+  'Sanan withdrew for Mar 2026 salary distribution (cheque #95771983)',
+  '2026-03',
+  'aad1cfc5-5670-423e-9ae0-2790935aa162',
+  '2026-05-11T00:00:00+05:00'
+);
+```
+
+### 3b. Return entry (when Sanan pays back)
+
+```sql
+-- Record when Sanan returns excess
+INSERT INTO transactions (id, type, amount_pkr, is_credit, description, reference_month, owner_id, created_at)
+VALUES (
+  lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(6))),
+  'owner_return',
+  784388,
+  1,
+  'Sanan returned excess from Jan-Mar 2026 distributions',
+  '2026-05',
+  'aad1cfc5-5670-423e-9ae0-2790935aa162',
+  '<DATE_WHEN_HE_RETURNS>'
+);
+```
+
+---
+
+## Phase 4: Transaction Page Footer — Updated Totals Display
+
+Currently shows:
+```
+                          Totals    Rs XX,XXX,XXX    Rs XX,XXX,XXX
+                             Net    -Rs X,XXX,XXX
+```
+
+After changes, show:
+```
+                  Operational Totals    Rs XX,XXX,XXX    Rs XX,XXX,XXX
+                  Operational Net       -Rs X,XXX,XXX
+                  ─────────────────────────────────────────────────────
+                  Owner Withdrawals                      Rs  9,500,000
+                  Owner Returns         Rs    784,388
+                  Withdrawal Balance                     Rs  8,715,612
+```
+
+This clearly separates:
+- **Operational** = the real costs/revenue (what the business earned and spent)
+- **Withdrawal/Return** = bank-level movements showing where money physically went
+
+---
+
+## Phase 5: Visual Mockup — How Transactions Page Will Look
+
+### All transactions view (showing Jan 2026 as example):
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ Transaction History (XX transactions)                              [Add Transaction] │
+├───────────┬─────────────────────┬──────────────────────────────┬─────────┬───────────┤
+│ DATE      │ TYPE                │ DESCRIPTION                  │ CREDIT  │ DEBIT     │
+├───────────┼─────────────────────┼──────────────────────────────┼─────────┼───────────┤
+│ 17-Mar    │ [Client Payment]    │ Jan 2026 Invoice             │3,191,954│     -     │
+│ 17-Mar    │ [Owner Withdrawal]  │ Sanan withdrew for Jan 2026  │    -    │3,200,000  │
+│           │  ⚠️ amber badge      │ salary + tax dist. (chq#981) │         │           │
+│ 18-Mar    │ [Salary Payout]     │ Qaim Ali - salary 2026-01    │    -    │1,051,307  │
+│ 18-Mar    │ [Salary Payout]     │ Zaki - salary 2026-01        │    -    │  587,119  │
+│ 18-Mar    │ [Salary Payout]     │ Mubashir - salary 2026-01    │    -    │  652,355  │
+│ 18-Mar    │ [Salary Payout]     │ Fitrus - salary 2026-01      │    -    │  384,889  │
+│ 18-Mar    │ [Contractor Tax]    │ Contractor tax - 2026-01     │    -    │  113,556  │
+├───────────┴─────────────────────┴──────────────────────────────┼─────────┼───────────┤
+│                                         Operational Totals     │3,191,954│ 2,789,226 │
+│                                         Operational Net        │         │  +402,728 │
+│                                         ──────────────────────────────────────────── │
+│                                         Owner Withdrawal       │    -    │ 3,200,000 │
+│                                         Sanan holding excess   │         │   410,773 │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+The amber `[Owner Withdrawal]` badge makes it immediately obvious: "this is when Sanan took money from the bank." The salary entries below show what he did with it.
+
+### After Sanan returns money:
+
+```
+│ ??-May    │ [Owner Return]      │ Sanan returned excess from   │ 784,388 │     -     │
+│           │  ⚠️ amber badge      │ Jan-Mar 2026 distributions   │         │           │
+```
+
+---
+
+## Files to Change (Summary)
+
+| File | Change |
+|------|--------|
+| `migrations/0003_add_withdrawal_types.sql` | New migration — update CHECK or document new types |
+| `src/lib/types.ts:57` | Add `owner_withdrawal` and `owner_return` to TransactionType |
+| `src/app/(app)/transactions/page.tsx:48` | Add labels, badges, filters for new types |
+| `src/app/(app)/transactions/page.tsx:90` | Update `isCreditType()` — add `owner_return` |
+| `src/app/(app)/transactions/page.tsx:189` | Update Net calc — exclude withdrawal/return from operational totals |
+| `src/app/(app)/transactions/page.tsx:700+` | Update footer to show withdrawal balance separately |
+| `src/app/(app)/dashboard/page.tsx:31` | Add labels/badges for new types |
+| `src/app/(app)/reports/page.tsx:28` | Add labels for new types |
+
+---
+
+## Execution Order
+
+```
+1. Fix Feb reference_month typo                    (SQL update, 1 min)
+2. Update TypeScript types                         (types.ts)
+3. Update transaction page                         (transactions/page.tsx)
+4. Update dashboard page                           (dashboard/page.tsx)
+5. Update reports page                             (reports/page.tsx)
+6. Create SQL migration for new types              (migrations/)
+7. Deploy code changes
+8. Insert 3 withdrawal entries                     (SQL inserts)
+9. When Sanan returns money → insert return entry
+```

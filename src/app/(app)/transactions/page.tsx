@@ -52,11 +52,13 @@ const typeLabels: Record<TransactionType, string> = {
   contractor_tax: "Contractor Tax",
   owner_repayment: "Owner Repayment",
   expense: "Expense",
+  owner_withdrawal: "Owner Withdrawal",
+  owner_return: "Owner Return",
 };
 
 const typeBadgeVariant: Record<
   TransactionType,
-  "default" | "secondary" | "destructive" | "outline"
+  "default" | "secondary" | "destructive" | "outline" | "warning"
 > = {
   client_payment: "default",
   owner_investment: "secondary",
@@ -64,13 +66,20 @@ const typeBadgeVariant: Record<
   contractor_tax: "destructive",
   owner_repayment: "outline",
   expense: "destructive",
+  owner_withdrawal: "warning",
+  owner_return: "warning",
 };
+
+// Bank-movement types excluded from operational totals to avoid double-counting
+const reconciliationTypes: TransactionType[] = ["owner_withdrawal", "owner_return"];
 
 const addableTypes: { value: TransactionType; label: string }[] = [
   { value: "client_payment", label: "Client Payment" },
   { value: "owner_investment", label: "Owner Investment" },
   { value: "owner_repayment", label: "Owner Repayment" },
   { value: "expense", label: "Expense" },
+  { value: "owner_withdrawal", label: "Owner Withdrawal" },
+  { value: "owner_return", label: "Owner Return" },
 ];
 
 const allFilterTypes: { value: TransactionType; label: string }[] = [
@@ -80,6 +89,8 @@ const allFilterTypes: { value: TransactionType; label: string }[] = [
   { value: "contractor_tax", label: "Contractor Tax" },
   { value: "owner_repayment", label: "Owner Repayment" },
   { value: "expense", label: "Expense" },
+  { value: "owner_withdrawal", label: "Owner Withdrawal" },
+  { value: "owner_return", label: "Owner Return" },
 ];
 
 const MONTHS = [
@@ -88,7 +99,7 @@ const MONTHS = [
 ];
 
 function isCreditType(type: TransactionType): boolean {
-  return type === "client_payment" || type === "owner_investment";
+  return type === "client_payment" || type === "owner_investment" || type === "owner_return";
 }
 
 export default function TransactionsPage() {
@@ -185,16 +196,27 @@ export default function TransactionsPage() {
     });
   }, [allTransactions, filterType, filterYear, filterMonth, filterDateFrom, filterDateTo, searchQuery]);
 
-  // Totals
+  // Totals — exclude reconciliation types (owner_withdrawal/owner_return) from operational totals
   const totalCredits = useMemo(
-    () => transactions.filter((t) => t.is_credit).reduce((s, t) => s + t.amount_pkr, 0),
+    () => transactions.filter((t) => t.is_credit && !reconciliationTypes.includes(t.type)).reduce((s, t) => s + t.amount_pkr, 0),
     [transactions]
   );
   const totalDebits = useMemo(
-    () => transactions.filter((t) => !t.is_credit).reduce((s, t) => s + t.amount_pkr, 0),
+    () => transactions.filter((t) => !t.is_credit && !reconciliationTypes.includes(t.type)).reduce((s, t) => s + t.amount_pkr, 0),
     [transactions]
   );
   const net = totalCredits - totalDebits;
+
+  // Withdrawal/return totals shown separately
+  const totalWithdrawals = useMemo(
+    () => transactions.filter((t) => t.type === "owner_withdrawal").reduce((s, t) => s + t.amount_pkr, 0),
+    [transactions]
+  );
+  const totalReturns = useMemo(
+    () => transactions.filter((t) => t.type === "owner_return").reduce((s, t) => s + t.amount_pkr, 0),
+    [transactions]
+  );
+  const withdrawalBalance = totalWithdrawals - totalReturns;
 
   const resetForm = () => {
     setFormType("client_payment");
@@ -213,7 +235,7 @@ export default function TransactionsPage() {
 
     const isCredit = isCreditType(formType);
     const needsOwner =
-      formType === "owner_investment" || formType === "owner_repayment";
+      formType === "owner_investment" || formType === "owner_repayment" || formType === "owner_withdrawal" || formType === "owner_return";
 
     const res = await fetch("/api/transactions", {
       method: "POST",
@@ -240,7 +262,7 @@ export default function TransactionsPage() {
   };
 
   const showOwnerField =
-    formType === "owner_investment" || formType === "owner_repayment";
+    formType === "owner_investment" || formType === "owner_repayment" || formType === "owner_withdrawal" || formType === "owner_return";
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -306,7 +328,7 @@ export default function TransactionsPage() {
     setEditSaving(true);
 
     const isCredit = isCreditType(editType);
-    const needsOwner = editType === "owner_investment" || editType === "owner_repayment";
+    const needsOwner = editType === "owner_investment" || editType === "owner_repayment" || editType === "owner_withdrawal" || editType === "owner_return";
 
     const res = await fetch(`/api/transactions/${editingTxn.id}`, {
       method: "PATCH",
@@ -764,6 +786,55 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell />
                   </TableRow>
+                  {(totalWithdrawals > 0 || totalReturns > 0) && (
+                    <>
+                      <TableRow className="border-t border-amber-500/20">
+                        <TableCell colSpan={3} className="text-right text-sm text-amber-500 sm:hidden">
+                          Owner Withdrawals
+                        </TableCell>
+                        <TableCell colSpan={4} className="text-right text-sm text-amber-500 hidden sm:table-cell md:hidden">
+                          Owner Withdrawals
+                        </TableCell>
+                        <TableCell colSpan={5} className="text-right text-sm text-amber-500 hidden md:table-cell">
+                          Owner Withdrawals
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {totalReturns > 0 && (
+                            <span className="font-mono tabular-nums text-sm text-amber-500">
+                              {formatPKR(totalReturns)}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {totalWithdrawals > 0 && (
+                            <span className="font-mono tabular-nums text-sm text-amber-500">
+                              {formatPKR(totalWithdrawals)}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell />
+                      </TableRow>
+                      {withdrawalBalance > 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-right text-sm font-medium text-amber-500 sm:hidden">
+                            Unreturned Balance
+                          </TableCell>
+                          <TableCell colSpan={4} className="text-right text-sm font-medium text-amber-500 hidden sm:table-cell md:hidden">
+                            Unreturned Balance
+                          </TableCell>
+                          <TableCell colSpan={5} className="text-right text-sm font-medium text-amber-500 hidden md:table-cell">
+                            Unreturned Balance
+                          </TableCell>
+                          <TableCell colSpan={2} className="text-right whitespace-nowrap">
+                            <span className="font-mono tabular-nums text-sm font-semibold text-amber-500">
+                              {formatPKR(withdrawalBalance)}
+                            </span>
+                          </TableCell>
+                          <TableCell />
+                        </TableRow>
+                      )}
+                    </>
+                  )}
                 </TableFooter>
               </Table>
             </div>
@@ -841,7 +912,7 @@ export default function TransactionsPage() {
               />
             </div>
 
-            {(editType === "owner_investment" || editType === "owner_repayment") && (
+            {(editType === "owner_investment" || editType === "owner_repayment" || editType === "owner_withdrawal" || editType === "owner_return") && (
               <div className="space-y-1.5">
                 <Label className="text-[13px]">Owner</Label>
                 <Select
