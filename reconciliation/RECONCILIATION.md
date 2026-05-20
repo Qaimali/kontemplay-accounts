@@ -8,7 +8,7 @@
 
 ## Context
 
-Kontemplay got access to the UBL online banking portal on **May 20, 2026**. Before that, Sanan Babar managed salary distributions by withdrawing lump sums via cheque to his personal account and distributing from there. He also paid contractor taxes to FBR from his own pocket.
+Kontemplay got access to the UBL online banking portal on **May 20, 2026**. Before that, Sanan Babar managed salary distributions by withdrawing lump sums via cheque to his personal account and distributing salaries + contractor taxes from there.
 
 This document reconciles both sources and identifies what needs to be corrected in the database.
 
@@ -72,8 +72,8 @@ All expenses paid by owners from their own pockets. No company bank activity.
 | 18-Feb | Mubashir salary (cheque) | | 329,165 | 162,744 |
 
 **Sanan's Side:**
-- Paid Dec contractor tax (Rs 133,115) to FBR from own pocket
-- Recorded in DB as owner_investment: **Yes**
+- Dec contractor tax (Rs 133,115) — paid from Sanan's OWN pocket (bank didn't have enough after salaries)
+- Recorded in DB as owner_investment: **Yes** (this is a legitimate own-pocket payment)
 
 **Status: Fully recorded in DB. All correct.**
 
@@ -90,7 +90,7 @@ All expenses paid by owners from their own pockets. No company bank activity.
 | | **Net revenue = 3,191,954** | | | |
 | 17-Mar | **Sanan withdrew (cheque to self)** | | **3,200,000** | 154,698 |
 
-**Sanan's Side (from his account):**
+**Sanan's Side (all paid from the 3,200,000 withdrawal):**
 
 | What | Amount | Source |
 |------|--------|--------|
@@ -98,17 +98,18 @@ All expenses paid by owners from their own pockets. No company bank activity.
 | Zaki salary | 587,119 | From withdrawal |
 | Mubashir salary | 652,355 | From withdrawal |
 | Fitrus salary | 384,889 | From withdrawal |
-| **Total salaries** | **2,675,670** | |
-| Contractor tax to FBR | 113,556 | **From own pocket** |
+| Contractor tax to FBR | 113,556 | From withdrawal |
+| **Total spent** | **2,789,227** | |
 
-- Withdrew: **3,200,000**
-- Distributed (salaries): **2,675,670**
-- **Sanan holding company money: Rs 524,330**
-- Contractor tax paid from own pocket: Rs 113,556
+```
+Withdrew:                 3,200,000
+Total spent:            - 2,789,227
+                         ──────────
+Sanan holding (company $):  410,773
+```
 
 **DB Issues:**
 - Withdrawal of 3,200,000 from company bank: **NOT in DB**
-- Owner investment for Jan contractor tax (113,556): **NOT in DB**
 
 ---
 
@@ -123,30 +124,31 @@ All expenses paid by owners from their own pockets. No company bank activity.
 | | **Net revenue = 3,478,158** | | | |
 | 16-Apr | **Sanan withdrew (cheque to self)** | | **3,000,000** | 632,856 |
 
-**Sanan's Side (from his account):**
+**Sanan's Side (all paid from withdrawal + Jan surplus):**
 
 | What | Amount | Source |
 |------|--------|--------|
-| Carried from Jan | 524,330 | Previous surplus |
+| Carried from Jan | 410,773 | Previous surplus |
 | New withdrawal | 3,000,000 | Company bank |
-| **Total available** | **3,524,330** | |
+| **Total available** | **3,410,773** | |
 | Qaim Ali salary | 1,051,635 | From withdrawal |
 | Zaki salary | 587,303 | From withdrawal |
 | Mubashir salary | 652,559 | From withdrawal |
 | Fitrus salary | 652,559 | From withdrawal |
 | Fatima (direct invoice) | 144,909 | From withdrawal |
-| **Total salaries** | **3,088,965** | |
-| Contractor tax to FBR | 124,947 | **From own pocket** |
-| Contractor tax (direct inv.) | 6,101 | **From own pocket** |
+| Contractor tax to FBR | 124,947 | From withdrawal |
+| Contractor tax (direct inv.) | 6,101 | From withdrawal |
+| **Total spent** | **3,220,013** | |
 
-- Available: **3,524,330**
-- Distributed (salaries): **3,088,965**
-- **Sanan holding company money: Rs 435,365**
-- Contractor tax paid from own pocket: Rs 131,048
+```
+Available:                3,410,773
+Total spent:            - 3,220,013
+                         ──────────
+Sanan holding (company $):  190,760
+```
 
 **DB Issues:**
 - Withdrawal of 3,000,000 from company bank: **NOT in DB**
-- Owner investment for Feb contractor tax (131,048): **NOT in DB**
 - Client payment reference_month says "2024-02" — should be "2026-02"
 
 ---
@@ -163,23 +165,26 @@ All expenses paid by owners from their own pockets. No company bank activity.
 | 11-May | **Sanan withdrew (cheque to self)** | | **3,300,000** | 565,224 |
 | 20-May | Contractor tax paid from bank | | 114,860 | **450,364** |
 
-**Sanan's Side (from his account):**
+**Sanan's Side (salaries paid from withdrawal, tax paid from company bank this time):**
 
 | What | Amount | Source |
 |------|--------|--------|
-| Carried from Jan+Feb | 435,365 | Previous surplus |
+| Carried from Jan+Feb | 190,760 | Previous surplus |
 | New withdrawal | 3,300,000 | Company bank |
-| **Total available** | **3,735,365** | |
+| **Total available** | **3,490,760** | |
 | Qaim Ali salary | 1,048,053 | From withdrawal |
 | Zaki salary | 585,289 | From withdrawal |
 | Mubashir salary | 650,321 | From withdrawal |
 | Fitrus salary | 422,709 | From withdrawal |
-| **Total salaries** | **2,706,372** | |
+| **Total spent** | **2,706,372** | |
+| Contractor tax | 114,860 | Paid from company bank (not Sanan) |
 
-- Available: **3,735,365**
-- Distributed (salaries): **2,706,372**
-- **Sanan holding company money: Rs 1,028,993**
-- Contractor tax: paid from company bank (Rs 114,860) — not from Sanan this time
+```
+Available:                3,490,760
+Salaries spent:         - 2,706,372
+                         ──────────
+Sanan holding (company $):  784,388
+```
 
 **DB Issues:**
 - Withdrawal of 3,300,000 from company bank: **NOT in DB**
@@ -217,7 +222,8 @@ Cash Position (formula):                  Rs    997,798
 ```
 
 Cash Position (997,798) does NOT match bank balance (450,364) because
-Sanan is holding Rs 1,028,993 of company money from excess withdrawals.
+Sanan is holding Rs 784,388 of company money from excess withdrawals,
+plus other reconciliation items (owner deposits, bank charges, etc.).
 
 ---
 
@@ -225,116 +231,122 @@ Sanan is holding Rs 1,028,993 of company money from excess withdrawals.
 
 ### Sanan Owes Company (excess from withdrawals)
 
-| Month | Withdrew | Salaries Distributed | Surplus |
+Sanan withdrew lump sums and paid both salaries AND contractor taxes from those withdrawals (except Dec tax which he paid from own pocket, and Mar tax which was paid from company bank).
+
+| Month | Withdrew | Spent (salary + tax) | Surplus |
 |-------|----------|---------------------|---------|
-| Jan 2026 | 3,200,000 | 2,675,670 | +524,330 |
-| Feb 2026 | 3,000,000 | 3,088,965 | -88,965 |
-| Mar 2026 | 3,300,000 | 2,706,372 | +593,628 |
-| **Total** | **9,500,000** | **8,471,007** | **+1,028,993** |
+| Jan 2026 | 3,200,000 | 2,789,227 | +410,773 |
+| Feb 2026 | 3,000,000 | 3,220,013 | -220,013 (used Jan surplus) |
+| Mar 2026 | 3,300,000 | 2,706,372 (salaries only) | +593,628 |
+| **Total** | **9,500,000** | **8,715,612** | **+784,388** |
 
-**Sanan owes company: Rs 1,028,993**
+**Sanan owes company: Rs 784,388**
 
-### Company Owes Sanan (his investments)
+### Company Owes Sanan (his investments — all recorded in DB)
 
-**Recorded in DB:**
+| Description | Amount |
+|-------------|--------|
+| Sanan Account Starting Payment | 5,000 |
+| Sanan paid for FBR contractor tax (Dec — own pocket) | 133,115 |
+| FBR (paid by owner) | 131,986 |
+| 15 lawyer + 20k bank transfer + 5.6k PSEB | 40,600 |
+| Fbr reg fee | 20,000 |
+| Secp reg and advance | 41,511 |
+| Designer 1sep - 19 nov | 177,736 |
+| Logo payment | 30,000 |
+| **Total** | **579,948** |
 
-| Description | Amount | Owner ID |
-|-------------|--------|----------|
-| Sanan Account Starting Payment | 5,000 | Sanan |
-| Sanan paid for FBR contractor tax (Dec) | 133,115 | Sanan |
-| FBR (paid by owner) | 131,986 | Sanan |
-| 15 lawyer + 20k bank transfer + 5.6k PSEB | 40,600 | Sanan |
-| Fbr reg fee | 20,000 | Sanan |
-| Secp reg and advance | 41,511 | Sanan |
-| Designer 1sep - 19 nov | 177,736 | Sanan |
-| Logo payment | 30,000 | Sanan |
-| **Subtotal recorded** | **579,948** | |
-
-**NOT recorded in DB (missing owner_investment entries):**
-
-| Description | Amount | Needs Adding |
-|-------------|--------|--------------|
-| Sanan paid Jan 2026 contractor tax from own funds | 113,556 | YES |
-| Sanan paid Feb 2026 contractor tax from own funds | 131,048 | YES |
-| **Subtotal missing** | **244,604** | |
-
-**Total company owes Sanan: Rs 824,552**
+Note: Jan & Feb contractor taxes were paid from company withdrawal money (not Sanan's own pocket), so they are NOT investments.
 
 ### Net Settlement
 
 ```
-Sanan owes company:                       Rs  1,028,993
-Company owes Sanan:                     - Rs    824,552
+Sanan owes company:                       Rs    784,388
+Company owes Sanan (investments):       - Rs    579,948
                                          ─────────────
-Net Sanan owes:                           Rs    204,441
+Net Sanan owes:                           Rs    204,440
 ```
 
 ---
 
 ## DB Changes Needed
 
-### 1. Add Missing Owner Investment Records (Sanan's contractor tax payments)
-
-```
-Type: owner_investment
-Owner: Sanan Babar (aad1cfc5-5670-423e-9ae0-2790935aa162)
-Amount: 113,556.30
-Description: "Sanan paid Jan 2026 contractor tax (own funds)"
-Reference Month: 2026-01
-is_credit: 1
-```
-
-```
-Type: owner_investment
-Owner: Sanan Babar (aad1cfc5-5670-423e-9ae0-2790935aa162)
-Amount: 131,048.12
-Description: "Sanan paid Feb 2026 contractor tax (own funds)"
-Reference Month: 2026-02
-is_credit: 1
-```
-
-### 2. Consider Adding New Transaction Type: `owner_withdrawal`
-
-To track the 3 lump-sum withdrawals Sanan made from the company bank:
+### 1. Track Sanan's Withdrawals (new transaction type: `owner_withdrawal`)
 
 | Date | Amount | Description |
 |------|--------|-------------|
-| 17-Mar-2026 | 3,200,000 | Sanan withdrew for Jan 2026 salary distribution |
-| 16-Apr-2026 | 3,000,000 | Sanan withdrew for Feb 2026 salary distribution |
+| 17-Mar-2026 | 3,200,000 | Sanan withdrew for Jan 2026 salary + tax distribution |
+| 16-Apr-2026 | 3,000,000 | Sanan withdrew for Feb 2026 salary + tax distribution |
 | 11-May-2026 | 3,300,000 | Sanan withdrew for Mar 2026 salary distribution |
 
-**Important:** These must be excluded from the Cash Position / Operating Cost formula to avoid double-counting with salary_payout entries. They are bank-level movements, not operational costs.
+**Important:** These must be excluded from Cash Position / Operating Cost to avoid double-counting with salary_payout and contractor_tax entries. They are bank-level movements, not operational costs.
 
-### 3. Record Sanan's Return (when it happens)
+### 2. Record Sanan's Return (when it happens)
 
-When Sanan returns excess money, record as `owner_return` or similar:
+When Sanan returns excess money:
 
 ```
-Type: owner_return (new type) or client_payment with note
-Amount: 1,028,993
-Description: "Sanan returned excess from Jan-Mar 2026 salary distributions"
+Type: owner_return (new type)
+Amount: 784,388
+Description: "Sanan returned excess from Jan-Mar 2026 distributions"
+Owner: Sanan Babar
 is_credit: 1
 ```
 
-### 4. Fix Data Issue
+### 3. Fix Data Issue
 
 The Feb 2026 client payment has `reference_month: "2024-02"` — should be `"2026-02"`.
+
+Transaction ID: `5fc9bec0-58dc-4372-ae47-18bcc04934c6`
 
 ---
 
 ## After All Settlements
 
+### Option A: Net settlement (Sanan pays difference only)
+
 ```
 Current bank balance:                     Rs    450,364
-+ Sanan returns excess:                 + Rs  1,028,993
-- Company repays Sanan investments:     - Rs    824,552
++ Sanan returns net:                    + Rs    204,440
                                          ─────────────
-Final bank balance:                       Rs    654,805
+Final bank balance:                       Rs    654,804
+Sanan's investment balance:               Rs          0
 ```
 
-Or if handled in two steps:
-1. Sanan returns Rs 1,028,993 → bank becomes Rs 1,479,357
-2. Company repays Sanan Rs 824,552 → bank becomes Rs 654,805
+### Option B: Two-step settlement
+
+```
+Step 1 — Sanan returns excess:
+  Bank: 450,364 + 784,388 =               Rs  1,234,752
+
+Step 2 — Company repays Sanan's investments:
+  Bank: 1,234,752 - 579,948 =             Rs    654,804
+  Sanan's investment balance:              Rs          0
+```
+
+---
+
+## Other Owners' Investment Balances (for reference)
+
+### Qaim Ali
+
+| Description | Amount |
+|-------------|--------|
+| Logo one cost | 15,000 |
+| Card fronts | 3,750 |
+| Fatima pmt | 80,000 |
+| **Total** | **98,750** |
+| Owner repayments received | -78,000 |
+| **Balance owed** | **20,750** |
+
+### Arsalan Dogar
+
+| Description | Amount |
+|-------------|--------|
+| Domain | 3,200 |
+| Kontemplay Domain | 2,888 |
+| Designer 20-30Nov | 91,392 |
+| **Total owed** | **97,480** |
 
 ---
 
