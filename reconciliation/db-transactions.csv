@@ -1,5 +1,5 @@
 Date,Type,Description,Reference Month,Owner,Credit PKR,Debit PKR
-2024-09-21,Owner Investment,"Domain (paid by owner)",2024-09,Arsalan Dogar,3200,
+2024-09-21,Owner Investment,"Domain (paid by owner)",2024-09,Arsalan Dogar,"3,200",
 2024-09-22,Expense,Domain,2024-09,,,"3,200"
 2025-06-26,Owner Investment,"Logo one cost (paid by owner)",2025-06,Qaim Ali,"15,000",
 2025-06-26,Owner Investment,"Logo payment (paid by owner)",2025-06,Sanan Babar,"30,000",
@@ -19,7 +19,7 @@ Date,Type,Description,Reference Month,Owner,Credit PKR,Debit PKR
 2025-12-22,Expense,Designer 20-30Nov,2025-12,,,"91,392"
 2026-01-21,Owner Investment,Sanan Account Starting Payment,2025-12,Sanan Babar,"5,000",
 2026-02-09,Owner Repayment,Karim farms advance,2026-02,Qaim Ali,,"28,000"
-2026-02-09,Client Payment,karim farm payment,2026-02,,28000,
+2026-02-09,Client Payment,karim farm payment,2026-02,,"28,000",
 2026-02-10,Owner Investment,"Sanan paid for FBR contractor tax",2025-12,Sanan Babar,"133,115",
 2026-02-10,Salary Payout,"Qaim Ali - salary Dec 2025",2025-12,,,"1,060,929"
 2026-02-10,Salary Payout,"Fatima - salary Dec 2025",2025-12,,,"349,389"
@@ -37,12 +37,14 @@ Date,Type,Description,Reference Month,Owner,Credit PKR,Debit PKR
 2026-03-05,Expense,FBR,2026-03,,,"131,986"
 2026-03-05,Expense,"15 lawyer + 20k bank transfer + 5.6k PSEB",2026-03,,,"40,600"
 2026-03-17,Client Payment,"Invoice #2 - Youth Athletes United (2026-01)",2026-01,,"3,191,954",
+2026-03-17,Owner Withdrawal,"Sanan withdrew for Jan 2026 salary + tax distribution (cheque #95771981)",2026-01,Sanan Babar,,"3,200,000"
 2026-03-17,Salary Payout,"Fitrus - salary 2026-01",2026-01,,,"384,889"
 2026-03-17,Salary Payout,"Mubashir - salary 2026-01",2026-01,,,"652,355"
 2026-03-17,Salary Payout,"Qaim Ali - salary 2026-01",2026-01,,,"1,051,307"
 2026-03-17,Salary Payout,"Zaki - salary 2026-01",2026-01,,,"587,119"
 2026-03-17,Contractor Tax,"Contractor tax - 2026-01",2026-01,,,"113,556"
 2026-04-15,Client Payment,"Feb 2026 Invoice",2026-02,,"3,478,158",
+2026-04-16,Owner Withdrawal,"Sanan withdrew for Feb 2026 salary + tax distribution (cheque #95771982)",2026-02,Sanan Babar,,"3,000,000"
 2026-04-16,Salary Payout,"Fitrus - salary 2026-02",2026-02,,,"652,559"
 2026-04-16,Salary Payout,"Mubashir - salary 2026-02",2026-02,,,"652,559"
 2026-04-16,Salary Payout,"Qaim Ali - salary 2026-02",2026-02,,,"1,051,635"
@@ -53,6 +55,7 @@ Date,Type,Description,Reference Month,Owner,Credit PKR,Debit PKR
 2026-04-21,Client Payment,"Karim Farm P2, transferred to Qaim's Account",2026-04,,"50,000",
 2026-05-10,Owner Repayment,"paid loan back to Qaim",2026-02,Qaim Ali,,"50,000"
 2026-05-10,Client Payment,march paymnt,2026-03,,"3,232,368",
+2026-05-11,Owner Withdrawal,"Sanan withdrew for Mar 2026 salary distribution (cheque #95771983)",2026-03,Sanan Babar,,"3,300,000"
 2026-05-11,Salary Payout,"Fitrus - salary 2026-03",2026-03,,,"422,709"
 2026-05-11,Salary Payout,"Mubashir - salary 2026-03",2026-03,,,"650,321"
 2026-05-11,Salary Payout,"Qaim Ali - salary 2026-03",2026-03,,,"1,048,053"
