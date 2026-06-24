@@ -53,7 +53,6 @@ export default function DistributePage() {
   const [remittanceTax, setRemittanceTax] = useState("0.25");
   const [totalUsd, setTotalUsd] = useState("");
   const [threshold, setThreshold] = useState("2");
-  const [operationalCost, setOperationalCost] = useState("1.5");
   const [referenceMonth, setReferenceMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -92,6 +91,7 @@ export default function DistributePage() {
             threshold: emp.default_threshold,
             contractor_tax_percent: emp.default_contractor_tax,
             remittance_tax_percent: emp.default_remittance_tax,
+            operational_cost_percent: emp.default_operational_cost,
             included: emp.default_salary_usd > 0,
           }))
         );
@@ -161,7 +161,6 @@ export default function DistributePage() {
     const res = calculateDistribution({
       amount_received_pkr: parseFloat(amountReceived),
       remittance_tax_percent: parseFloat(remittanceTax),
-      operational_cost_percent: parseFloat(operationalCost) || 0,
       total_usd: parseFloat(totalUsd),
       threshold: parseFloat(threshold),
       base_rate: rates!.base_rate,
@@ -370,15 +369,6 @@ export default function DistributePage() {
                   onChange={(e) => setThreshold(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[13px]">Operational Cost (%)<Tip text="A percentage deducted from each employee's gross PKR and transferred to the company. This is an internal transfer, not a government tax.\n\nExample: 1.5% of 277,700 gross = 4,166 PKR moved to the company." /></Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={operationalCost}
-                  onChange={(e) => setOperationalCost(e.target.value)}
-                />
-              </div>
             </div>
 
             {rates && (
@@ -437,6 +427,7 @@ export default function DistributePage() {
                   <TableHead>Threshold</TableHead>
                   <TableHead>Contractor %</TableHead>
                   <TableHead>Remittance %</TableHead>
+                  <TableHead>Op. Cost %</TableHead>
                   <TableHead>Rate</TableHead>
                 </TableRow>
               </TableHeader>
@@ -488,6 +479,18 @@ export default function DistributePage() {
                         value={emp.remittance_tax_percent}
                         onChange={(e) =>
                           updateEmployee(i, "remittance_tax_percent", parseFloat(e.target.value) || 0)
+                        }
+                        disabled={!emp.included}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="w-20"
+                        value={emp.operational_cost_percent}
+                        onChange={(e) =>
+                          updateEmployee(i, "operational_cost_percent", parseFloat(e.target.value) || 0)
                         }
                         disabled={!emp.included}
                       />
@@ -637,7 +640,7 @@ export default function DistributePage() {
                 <div className="text-right font-mono tabular-nums font-medium">{formatPKR(result.company.gross_from_usd)}</div>
                 <div className="text-muted-foreground">Threshold Savings</div>
                 <div className="text-right font-mono tabular-nums font-medium text-emerald-400">{formatPKR(result.company.threshold_savings)}</div>
-                <div className="text-muted-foreground">Operational Cost ({operationalCost}%)</div>
+                <div className="text-muted-foreground">Operational Cost</div>
                 <div className="text-right font-mono tabular-nums font-medium text-emerald-400">{formatPKR(result.company.operational_cost)}</div>
                 <div className="text-muted-foreground">Total before tax</div>
                 <div className="text-right font-mono tabular-nums font-medium">{formatPKR(result.company.total_before_tax)}</div>
@@ -795,7 +798,7 @@ export default function DistributePage() {
                               <tr><th>Gross (PKR)</th><td class="mono">${formatPKR(emp.gross_pkr)}</td></tr>
                               <tr><th>Contractor Tax (${emp.contractor_tax_percent}%)</th><td class="mono red">-${formatPKR(emp.contractor_tax_pkr)}</td></tr>
                               <tr><th>Remittance Tax (${emp.remittance_tax_percent}%)</th><td class="mono red">-${formatPKR(emp.remittance_tax_pkr)}</td></tr>
-                              <tr><th>Operational Cost (${operationalCost}%)</th><td class="mono red">-${formatPKR(emp.operational_cost_pkr)}</td></tr>
+                              <tr><th>Operational Cost (${emp.operational_cost_percent}%)</th><td class="mono red">-${formatPKR(emp.operational_cost_pkr)}</td></tr>
                               <tr><th>Total Tax</th><td class="mono red">-${formatPKR(emp.total_tax_pkr)}</td></tr>
                               <tr class="net-row"><th>Net Payable (PKR)</th><td class="mono green">${formatPKR(emp.net_pkr)}</td></tr>
                             </table>
@@ -832,7 +835,7 @@ export default function DistributePage() {
                   <div className="text-muted-foreground">Remittance Tax ({emp.remittance_tax_percent}%)</div>
                   <div className="text-right font-mono tabular-nums font-medium text-red-400">-{formatPKR(emp.remittance_tax_pkr)}</div>
 
-                  <div className="text-muted-foreground">Operational Cost ({operationalCost}%)</div>
+                  <div className="text-muted-foreground">Operational Cost ({emp.operational_cost_percent}%)</div>
                   <div className="text-right font-mono tabular-nums font-medium text-red-400">-{formatPKR(emp.operational_cost_pkr)}</div>
 
                   <div className="text-muted-foreground">Total Tax</div>

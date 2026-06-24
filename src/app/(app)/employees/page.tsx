@@ -46,6 +46,7 @@ type EmployeeForm = {
   default_threshold: string;
   default_contractor_tax: string;
   default_remittance_tax: string;
+  default_operational_cost: string;
   is_active: boolean;
 };
 
@@ -60,6 +61,7 @@ const emptyForm: EmployeeForm = {
   default_threshold: "",
   default_contractor_tax: "",
   default_remittance_tax: "",
+  default_operational_cost: "",
   is_active: true,
 };
 
@@ -85,6 +87,7 @@ function formFromEmployee(emp: Employee): EmployeeForm {
     default_threshold: String(emp.default_threshold),
     default_contractor_tax: String(emp.default_contractor_tax),
     default_remittance_tax: String(emp.default_remittance_tax),
+    default_operational_cost: String(emp.default_operational_cost),
     is_active: emp.is_active,
   };
 }
@@ -243,6 +246,7 @@ export default function EmployeesPage() {
       default_threshold: parseFloat(form.default_threshold) || 0,
       default_contractor_tax: parseFloat(form.default_contractor_tax) || 0,
       default_remittance_tax: parseFloat(form.default_remittance_tax) || 0,
+      default_operational_cost: parseFloat(form.default_operational_cost) || 0,
       is_active: form.is_active,
     };
 
@@ -304,7 +308,7 @@ export default function EmployeesPage() {
       amount_pkr: "",
       contractor_tax_pct: String(emp.default_contractor_tax),
       remittance_tax_pct: String(emp.default_remittance_tax),
-      operational_cost_pct: "0",
+      operational_cost_pct: String(emp.default_operational_cost),
       description: "",
       reference_month: "",
     });
@@ -579,6 +583,22 @@ export default function EmployeesPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="operational_cost" className="text-[13px]">Operational Cost %</Label>
+                <Input
+                  id="operational_cost"
+                  type="number"
+                  step="any"
+                  value={form.default_operational_cost}
+                  onChange={(e) =>
+                    updateField("default_operational_cost", e.target.value)
+                  }
+                  required
+                />
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <Checkbox
                 id="is_active"
@@ -827,6 +847,8 @@ export default function EmployeesPage() {
                   </div>
                   <div className="text-right text-[13px] text-muted-foreground hidden sm:flex sm:items-center sm:gap-3">
                     <span className="font-mono tabular-nums">Tax: {emp.default_contractor_tax}% + {emp.default_remittance_tax}%</span>
+                    <span className="text-muted-foreground/30">|</span>
+                    <span className="font-mono tabular-nums">Op: {emp.default_operational_cost}%</span>
                     <span className="text-muted-foreground/30">|</span>
                     <span className="font-mono tabular-nums">Threshold: {emp.default_threshold}</span>
                   </div>

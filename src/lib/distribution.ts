@@ -3,7 +3,6 @@ import type { EmployeeDistInput, EmployeeDistResult, DistributionResult } from "
 interface DistributionInput {
   amount_received_pkr: number;
   remittance_tax_percent: number;
-  operational_cost_percent: number;
   total_usd: number;
   threshold: number; // default threshold
   base_rate: number;
@@ -42,7 +41,7 @@ export function calculateDistribution(input: DistributionInput): DistributionRes
 
     const contractor_tax_pkr = gross_pkr * (emp.contractor_tax_percent / 100);
     const remittance_tax_pkr = gross_pkr * (emp.remittance_tax_percent / 100);
-    const operational_cost_pkr = gross_pkr * (input.operational_cost_percent / 100);
+    const operational_cost_pkr = gross_pkr * (emp.operational_cost_percent / 100);
     const total_tax = contractor_tax_pkr + remittance_tax_pkr + operational_cost_pkr;
     const net_pkr = gross_pkr - total_tax;
     const threshold_savings_pkr = emp.salary_usd * emp.threshold;
@@ -57,6 +56,7 @@ export function calculateDistribution(input: DistributionInput): DistributionRes
       threshold: emp.threshold,
       contractor_tax_percent: emp.contractor_tax_percent,
       remittance_tax_percent: emp.remittance_tax_percent,
+      operational_cost_percent: emp.operational_cost_percent,
       gross_pkr,
       threshold_savings_pkr,
       contractor_tax_pkr,

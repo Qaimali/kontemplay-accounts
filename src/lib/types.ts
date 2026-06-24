@@ -15,6 +15,7 @@ export interface Employee {
   default_threshold: number;
   default_contractor_tax: number;
   default_remittance_tax: number;
+  default_operational_cost: number;
   is_active: boolean;
   created_at: string;
 }
@@ -113,6 +114,7 @@ export interface EmployeeDistInput {
   threshold: number;
   contractor_tax_percent: number;
   remittance_tax_percent: number;
+  operational_cost_percent: number;
   included: boolean;
 }
 
@@ -124,6 +126,7 @@ export interface EmployeeDistResult {
   threshold: number;
   contractor_tax_percent: number;
   remittance_tax_percent: number;
+  operational_cost_percent: number;
   gross_pkr: number;
   threshold_savings_pkr: number;
   contractor_tax_pkr: number;
